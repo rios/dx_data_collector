@@ -1,0 +1,1 @@
+# Remove this line; add ros packages you wish to blacklist from the catkin-build here (newline separated); make sure to copy this file into the container w/ the Earthfile

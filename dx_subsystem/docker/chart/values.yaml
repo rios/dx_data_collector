@@ -1,0 +1,18 @@
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+replicaCount: 1
+
+dockerRegistry: "<internal_registry>"
+containerTag: develop
+
+env:
+  PYTHONUNBUFFERED: 1
+  ROSCONSOLE_STDOUT_LINE_BUFFERED: 1
+
+configs: {}
+nameOverride: ""
+fullnameOverride: ""
+
+# These values specify how to assign this deployment to a k3s Node
+nodeSelector:
+  kubernetes.io/hostname: headnode

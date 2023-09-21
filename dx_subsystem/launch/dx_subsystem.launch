@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- The YAML describing the system I/O configuration. Example in the config folder  -->
+    <arg name="node_name" default = "subsystem_node"/>
+    <arg name="subsystem_config_file" doc="The YAML describing the system Subsystem configuration. Example in the config folder"/>
+    <arg name="alarm_config_file" default="$(find dx_subsystem)/config/alarms.yaml"/>
+
+    <node pkg="dx_subsystem" type="subsystem_node.py" name="$(arg node_name)" output="screen">
+        <rosparam file="$(arg subsystem_config_file)" command="load"/>
+        <param name="alarms_config" textfile="$(arg alarm_config_file)" />
+
+    </node>
+</launch>

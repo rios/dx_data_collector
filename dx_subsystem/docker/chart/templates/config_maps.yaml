@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "dx-subsystem.fullname" . }}-config
+data:
+{{ if .Values.configs.config_yaml }}
+  subsystem_config.yaml: {{ toYaml .Values.configs.config_yaml | indent 4 }}
+{{ else }}
+{{ (.Files.Glob "configs/subsystem_config.yaml" ).AsConfig | indent 2 }}
+{{ end }}
+

@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>dx_subsystem_commander</name>
+  <version>0.0.1</version>
+  <description>Python interface for working with the RIOS I/O system</description>
+
+  <maintainer email="leo.keselman@rios.ai">Leo Keselman</maintainer>
+  <maintainer email="chris.keraly@rios.ai">Chris Keraly</maintainer>
+
+  <license>Proprietary</license>
+
+  <!-- The *depend tags are used to specify dependencies -->
+  <!-- Dependencies can be catkin packages or system dependencies -->
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>dx_subsystem_msgs</exec_depend>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+</package>
