@@ -1,0 +1,16 @@
+apiVersion: v2
+name: dx-data-collector
+description: RIOS Data Collector (dx-data-collector)
+type: application
+
+# Chart Version
+version: 0.0.1
+
+# Application Version
+appVersion: "0.0.1"
+
+# External Chart Dependencies 
+# dependencies:
+# - name: adaptive-subtractor
+#   version: "0.1.0"
+#     repository: "oci://localhost:5000"

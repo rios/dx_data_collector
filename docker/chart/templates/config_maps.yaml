@@ -1,0 +1,11 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "dx-data-collector.fullname" . }}-config
+data:
+{{ if .Values.configs.config_yaml }}
+  data_collection_config.yaml: {{ toYaml .Values.configs.config_yaml | indent 4 }}
+{{ else }}
+{{ (.Files.Glob "configs/data_collection_config.yaml" ).AsConfig | indent 2 }}
+{{ end }}

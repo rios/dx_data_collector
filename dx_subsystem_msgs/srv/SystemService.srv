@@ -1,6 +1,0 @@
-string some_request
----
-# Whether the request was processed successfully
-bool success
-# Error message if the request could not be processed
-string message

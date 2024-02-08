@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>dx_data_collector</name>
+  <version>0.0.1</version>
+  <description>Subsystem for collecting and exporting data from ROS</description>
+
+  <!-- One maintainer tag required, multiple allowed, one person per tag -->
+  <maintainer email="leo.keselman@rios.ai">Leo Keselman</maintainer>
+  <maintainer email="shubham.kanitkar@rios.ai">Shubham Kanitkar</maintainer>
+
+  <license>Proprietary</license>
+
+  <author email="leo.keselman@rios.ai">Leo Keselman</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>roscpp</depend>
+  <depend>roscpp_serialization</depend>
+  <depend>rosbag_storage</depend>
+  <depend>dx_data_collector_msgs</depend>
+  <depend>dx_sysmon_sdk</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>dx_rios_yaml</depend>
+  <depend>cv_bridge</depend>
+  <depend>rosbag</depend>
+  <depend>tf2_ros</depend>
+
+</package>

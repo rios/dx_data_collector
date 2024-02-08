@@ -1,0 +1,69 @@
+# Descriptive name for data
+episode_name: test_data
+ingestion:
+  # Max time data is stored in memory - this is an upper bound on triggering as well
+  buffer_length_s: 10
+  # List of topics to subscribe to
+  topics:
+   # Camera data
+    - /oak/rgb/camera_info
+    - /oak/rgb/image_raw
+    - /oak/rgb/image_raw/compressed
+    - /oak/rgb/image_raw/compressedDepth
+    - /oak/points
+    - /oak/imu/data
+    - /oak/stereo/camera_info
+    - /oak/stereo/image_raw
+    - /oak/stereo/image_raw/compressed
+    - /oak/stereo/image_raw/compressedDepth
+    - /oak/left/image_raw
+    - /oak/left/camera_info
+    - /oak/right/image_raw
+    - /oak/right/camera_info
+    - /pick_stack_camera_r2/image_raw
+    - /pick_stack_camera_r2/camera_info
+
+    # # Cartesian Data
+    - /tf
+    - /tf_static
+    - /robot_2_cartesian_state
+    
+    # # IO Points
+    - topic: /R2_Distance_Sensor/state
+      throttle_period_s: 1.0 # Throttle to this period if the value has no change
+    - /R2_Board_Presense_Sensor_1/state
+    - /R2_Board_Presense_Sensor_2/state
+    - /R2_Board_Presense_Sensor_3/state
+    - /R2_Board_Presense_Sensor_4/state
+    - /R2_Flush_Sensor_1/state
+    - /R2_Flush_Sensor_2/state
+    - /Upstream_Trigger/state
+    - /Downstream_Trigger/state
+
+    # App Mod Status
+    - /app_mods/plywood_robot_app_mod/status
+
+formatters:
+  - name: json # used for pipelines
+    type: json
+  - name: rosbag # used for pipelines
+    type: rosbag
+  
+output:
+  - name: wasabi # used for pipelines
+    type: s3
+    aws_profile: wasabi
+    endpoint_url: https://s3.us-west-1.wasabisys.com
+    bucket: rios-data-collector-testing
+    env: dev
+    area: test-collection
+
+  - name: filesystem # used for pipelines
+    type: filesystem
+    path: /opt/rios/test_data
+
+pipelines:
+  - formatter: json
+    outputter: wasabi
+  - formatter: rosbag
+    outputter: filesystem

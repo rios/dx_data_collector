@@ -1,4 +1,4 @@
-name: dx_subsystem - Build
+name: dx_data_collector - Build
 
 on:
   push:
@@ -11,7 +11,7 @@ jobs:
   build:
     uses: ./.github/workflows/rios_build.yaml
     with:
-      working-directory: dx_subsystem
+      working-directory: '.'
     secrets:
       ssh-key: ${{ secrets.CI_SSH_KEY }}
       bot-token: ${{ secrets.RIOS_BOT_TOKEN }}

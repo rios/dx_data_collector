@@ -1,0 +1,15 @@
+# alarms list:
+
+# - name: xxx
+#   type: xxx
+
+#   alarm:
+#     severity: xxx
+#     description: xxx
+#     remedy: xxx
+#     period: 000
+#     tags: []
+  
+#   settings: {}
+
+[]

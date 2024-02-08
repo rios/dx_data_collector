@@ -1,0 +1,102 @@
+VERSION 0.7
+
+IMPORT github.com/rios-ai/<internal_build_framework> AS RIOS
+IMPORT github.com/rios-ai/<internal_build_framework>/conda AS CONDA
+ARG --global MAMBA='source /opt/mamba/etc/profile.d/conda.sh && mamba'
+ARG --global CONDA='source /opt/mamba/etc/profile.d/conda.sh && conda'
+ARG --global WORKSPACE_NAME=rios
+FROM CONDA+base-image-ros1 --BASE_IMAGE=ubuntu:20.04
+ARG CLEAR_CACHE=FALSE
+save-source:
+    LOCALLY
+    SAVE ARTIFACT ../ local_source
+
+get-deps:
+    FROM +base
+    ARG CURRENT_REPO
+    ARG DEV_ENV=false
+    # Load customizations 
+    WORKDIR /opt/rios/src
+    COPY submodules.repos .
+
+    DO CONDA+PULL_SUBMODULES
+    
+    #Install CONDA deps
+    DO CONDA+INSTALL_DEPENDENCIES --CACHED=true
+
+    DO +ADD_TINYXML
+
+    RUN --no-cache echo "=== Invalidating the cache ==="
+   
+    # Copy src
+    COPY +save-source/local_source /opt/rios/src/dx_data_collector
+
+    IF [ "${DEV_ENV}" = true ]
+      SAVE ARTIFACT /opt/rios/src source
+    END
+    SAVE ARTIFACT /opt/mamba/envs/rios mamba_env_test
+
+build:
+    FROM +get-deps
+
+    WORKDIR /opt/rios
+    
+    #ROS env setup
+    DO CONDA+BUILD_ROS1_WORKSPACE --CACHED=true --CATKIN_BUILD_ARGS="-DBUILD_SHARED_LIBS=ON -DENABLE_PUSH=OFF -DENABLE_COMPRESSION=OFF"
+
+copy-build:
+    FROM +base
+    ARG DEV_ENV=false
+    WAIT
+    # Build the project
+      BUILD +build
+    END
+    # Copy build output
+    COPY +build/install /opt/rios/install
+
+    # Copy the conda environment
+    COPY +get-deps/mamba_env_test /opt/mamba/envs/rios
+    
+    IF [ "${DEV_ENV}" = true ]
+      # Copy source
+      COPY +get-deps/source /opt/rios/src
+    END
+
+unit-tests:
+    FROM +build
+    WORKDIR /opt/rios
+    RUN /bin/bash -c "$MAMBA run -n rios catkin test"
+
+tag-image: # Use the shared Tag Image code
+    ARG TARGET_MAME=+copy-build
+    FROM $TARGET_MAME
+    ARG CURRENT_REPO
+    ARG CURRENT_BRANCH
+    ARG CURRENT_COMMIT_HASH
+    ARG CURRENT_TAG=latest
+    ARG CURRENT_DATETIME
+    ARG DEV_ENV=false
+    ARG USERNAME
+
+    LABEL buildtime=$CURRENT_DATETIME
+    
+    DO  CONDA+EXPORT_ENV
+    IF [ "${DEV_ENV}" = false ]
+      DO CONDA+SETUP_ROS1_ENTRYPOINT
+      DO  RIOS+TAG_IMAGE --BRANCH=$CURRENT_BRANCH --REPO=$CURRENT_REPO --COMMIT=$CURRENT_COMMIT_HASH
+    ELSE
+      DO CONDA+SETUP_DEV_ENV --USERNAME=$USERNAME
+      DO RIOS+TAG_IMAGE --BRANCH=$CURRENT_BRANCH --REPO="$CURRENT_REPO"-development --COMMIT=$CURRENT_COMMIT_HASH
+    END    
+
+ADD_TINYXML:
+    COMMAND
+    WORKDIR /opt/rios/src
+    GIT CLONE git@github.com:leethomason/tinyxml2.git tinyxml2
+    WORKDIR /opt/rios/src/tinyxml2
+
+    RUN /bin/bash -c "mkdir build \
+                      && cd build \
+                      && ${MAMBA} run -n ${WORKSPACE_NAME} cmake .. -DBUILD_SHARED_LIBS=OFF -DENABLE_PUSH=OFF -DENABLE_COMPRESSION=OFF\
+                      && ${MAMBA} run -n ${WORKSPACE_NAME} cmake --build . --parallel 4 \
+                      && ${MAMBA} run -n ${WORKSPACE_NAME} cmake --install . --prefix /opt/mamba/envs/rios/"

@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "dx-data-collector.fullname" . }}
+  labels:
+    {{- include "dx-data-collector.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "dx-data-collector.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        app: dx-data-collector
+        {{- include "dx-data-collector.selectorLabels" . | nindent 8 }}
+    spec:
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+        fsGroup: 0
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      containers:
+        - name: dx-data-collector
+          image: {{ .Values.dockerRegistry }}/dx_data_collector:{{ .Values.containerTag }}
+          args: ["/bin/bash", "-c", "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/rios/install/lib &&
+                                     roslaunch dx_data_collector dx_data_collector.launch 
+                                                                 data_collection_config:=/data-collector/data_collection_config.yaml
+                                                                 node_name:={{ .Values.collectorName }} --wait"]
+          env:
+            - name: AWS_SHARED_CREDENTIALS_FILE 
+              value: "/vault/secrets/wasabi-access.yaml" 
+            - name: ROS_MASTER_URI
+              value: http://{{ .Release.Name}}-rios-roscore-service:80/
+            - name: ROS_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: RIOS_SUBSYSTEM_TYPE
+              value: dx-data-collector
+            - name: RIOS_SUBSYSTEM_INSTANCE
+              value: {{ include "dx-data-collector.name" . }}
+            {{- range $key, $val := .Values.env }}
+            - name: {{ $key }}
+              value: "{{ $val }}"
+            {{- end }}
+          securityContext:
+            runAsUser: 0
+            privileged: true
+            allowPrivilegeEscalation: true
+          volumeMounts:
+          - name: data-collector-config
+            mountPath: /data-collector/
+            readOnly: false
+          - name: fs-output-dir
+            mountPath: /data-collector-fs-data/
+            readOnly: false 
+          startupProbe:
+            exec:
+              command:
+              - sh
+              - -c
+              - 'curl -f --header "subsystem-type: $RIOS_SUBSYSTEM_TYPE" --header "subsystem-instance: $RIOS_SUBSYSTEM_INSTANCE" {{ .Values.sysmon_probes.host }}:{{ .Values.sysmon_probes.port }}{{ .Values.sysmon_probes.paths.startup }}'
+            initialDelaySeconds: 5
+            periodSeconds: 3
+            failureThreshold: 100
+          livenessProbe:
+            exec:
+              command:
+              - sh
+              - -c
+              - 'curl -f --header "subsystem-type: $RIOS_SUBSYSTEM_TYPE" --header "subsystem-instance: $RIOS_SUBSYSTEM_INSTANCE" {{ .Values.sysmon_probes.host }}:{{ .Values.sysmon_probes.port }}{{ .Values.sysmon_probes.paths.liveness }}'
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: data-collector-config
+          configMap:
+            name: {{ include "dx-data-collector.fullname" . }}-config
+        - name: fs-output-dir
+          hostPath: 
+            path: {{ .Values.fsOutputDir }}
+            type: DirectoryOrCreate   
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

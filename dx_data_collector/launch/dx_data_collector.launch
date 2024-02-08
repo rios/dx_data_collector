@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- Name for the node  -->
+    <arg name="node_name" default = "dx_data_collector"/>
+    <!-- Data collection config - example in config folder -->
+    <arg name="data_collection_config" doc="Data collection config - example in config folder"/>
+
+    <!-- Sysmon config -->
+    <arg name="alarms_config" default="$(find dx_data_collector)/config/alarms_config.yaml" doc="alarms configuration file"/>
+    <arg name="dependencies_config" default="$(find dx_data_collector)/config/dependencies_config.yaml" doc="dependencies dependencies configuration file"/>
+
+    <!-- Launch the node -->
+    <node pkg="dx_data_collector" type="dx_data_collector_node" name="$(arg node_name)" output="screen">
+        <rosparam file="$(arg data_collection_config)" command="load"/>
+        <param name="config" textfile="$(arg data_collection_config)"/>
+        <param name="alarms_config" textfile="$(arg alarms_config)"/>
+        <param name="dependencies_config" textfile="$(arg dependencies_config)"/>
+    </node>
+</launch>

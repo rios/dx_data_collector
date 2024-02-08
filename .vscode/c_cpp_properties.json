@@ -1,0 +1,23 @@
+{
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "${default}",
+                "limitSymbolsToIncludedHeaders": false
+            },
+            "includePath": [
+                "</home/<user>/RIOS/workspaces/app_dev_ws/devel/include/**",
+                "</home/<user>/miniforge3/envs/dx_data_collector/x86_64-conda-linux-gnu/sysroot/usr/include/**",
+                "/opt/ros/noetic/include/**",
+                "/usr/include/**"
+            ],
+            "name": "ROS",
+            "intelliSenseMode": "gcc-x64",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu11",
+            "cppStandard": "c++14",
+            "configurationProvider": "b2.catkin_tools"
+        }
+    ],
+    "version": 4
+}

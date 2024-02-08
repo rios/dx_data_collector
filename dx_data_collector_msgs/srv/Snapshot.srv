@@ -1,0 +1,11 @@
+# Time snapshot should start
+time start_time
+# Time snapshot should end
+time end_time
+# A name for the snapshot
+string snapshot_name
+---
+# Whether the request was received and started
+bool success
+# Error message if the request could not be processed
+string message

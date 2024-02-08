@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package format="2">
+  
+  <name>dx_data_collector_commander</name>
+  <version>0.0.1</version>
+  <description>RIOS interface for data collection</description>
+
+  <maintainer email="leo.keselman@rios.ai">Leo Keselman</maintainer>
+  <maintainer email="carlos.fernandez@rios.ai">Carlos Fernandez-Martinez</maintainer>
+
+  <license>Proprietary</license>
+
+  <author email="leo.keselman@rios.ai">Leo Keselman</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  
+  <depend>roscpp</depend>
+  <depend>dx_data_collector_msgs</depend>
+  <depend>dx_rios_utils</depend>
+  <depend>dx_rios_pybind</depend>
+  
+</package>
