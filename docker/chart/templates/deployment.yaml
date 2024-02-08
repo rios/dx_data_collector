@@ -28,8 +28,7 @@ spec:
       containers:
         - name: dx-data-collector
           image: {{ .Values.dockerRegistry }}/dx_data_collector:{{ .Values.containerTag }}
-          args: ["/bin/bash", "-c", "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/rios/install/lib &&
-                                     roslaunch dx_data_collector dx_data_collector.launch 
+          args: ["/bin/bash", "-c", "roslaunch dx_data_collector dx_data_collector.launch 
                                                                  data_collection_config:=/data-collector/data_collection_config.yaml
                                                                  node_name:={{ .Values.collectorName }} --wait"]
           env:

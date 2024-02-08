@@ -1,102 +1,128 @@
 VERSION 0.7
 
-IMPORT github.com/rios-ai/<internal_build_framework> AS RIOS
-IMPORT github.com/rios-ai/<internal_build_framework>/conda AS CONDA
-ARG --global MAMBA='source /opt/mamba/etc/profile.d/conda.sh && mamba'
-ARG --global CONDA='source /opt/mamba/etc/profile.d/conda.sh && conda'
-ARG --global WORKSPACE_NAME=rios
-FROM CONDA+base-image-ros1 --BASE_IMAGE=ubuntu:20.04
-ARG CLEAR_CACHE=FALSE
+IMPORT --allow-privileged github.com/rios-ai/<internal_build_framework> AS RIOS
+IMPORT --allow-privileged github.com/rios-ai/<internal_build_framework>/ros1 AS ROS1
+
+FROM RIOS+rios-ros
+
+ARG DEV_ENV=false --global
+
+# Custom dependencies needed for this specific ROS Node
+custom-dependencies:
+    FROM +base
+    WORKDIR /opt/rios/src
+
+    # Use these files as needed; if you don't need them, feel free to remove from the repo / Earthfile
+    # The build will install dependencies using these files prior to building your ROS Workspace
+    #COPY ros-blacklist.txt .
+    #COPY requirements.txt .
+    COPY apt-packages.txt .
+    COPY submodules.repos .
+
+# Build step saves the source code to an artifact for copying into the image (+copy-source step)
 save-source:
     LOCALLY
     SAVE ARTIFACT ../ local_source
 
-get-deps:
-    FROM +base
-    ARG CURRENT_REPO
-    ARG DEV_ENV=false
-    # Load customizations 
-    WORKDIR /opt/rios/src
-    COPY submodules.repos .
+# Build step copies the saved source code into the image
+copy-source:
+    FROM +custom-dependencies
+    # Uncomment if you wish to copy source from your repository into the RIOS ROS Workspace overlay
+    # As written this copies the root directory of your repo directly to /opt/rios/src
+    COPY +save-source/local_source /opt/rios/src/$CURRENT_REPO
 
-    DO CONDA+PULL_SUBMODULES
-    
-    #Install CONDA deps
-    DO CONDA+INSTALL_DEPENDENCIES --CACHED=true
+# Build step for pulling dependencies
+dep-setup:
+    FROM +copy-source
 
-    DO +ADD_TINYXML
-
-    RUN --no-cache echo "=== Invalidating the cache ==="
-   
-    # Copy src
-    COPY +save-source/local_source /opt/rios/src/dx_data_collector
-
-    IF [ "${DEV_ENV}" = true ]
-      SAVE ARTIFACT /opt/rios/src source
-    END
-    SAVE ARTIFACT /opt/mamba/envs/rios mamba_env_test
-
-build:
-    FROM +get-deps
-
-    WORKDIR /opt/rios
-    
-    #ROS env setup
-    DO CONDA+BUILD_ROS1_WORKSPACE --CACHED=true --CATKIN_BUILD_ARGS="-DBUILD_SHARED_LIBS=ON -DENABLE_PUSH=OFF -DENABLE_COMPRESSION=OFF"
+    DO RIOS+RECURSIVE_PULL_DEPS
+    DO +ADD_AWS_CPP_SDK
+    DO ROS1+CATKIN_CREATE
 
 copy-build:
-    FROM +base
-    ARG DEV_ENV=false
+    FROM +dep-setup
+    
     WAIT
-    # Build the project
+      # Build the project
       BUILD +build
     END
+
     # Copy build output
     COPY +build/install /opt/rios/install
-
-    # Copy the conda environment
-    COPY +get-deps/mamba_env_test /opt/mamba/envs/rios
-    
-    IF [ "${DEV_ENV}" = true ]
-      # Copy source
-      COPY +get-deps/source /opt/rios/src
+    IF [ "$DEV_ENV" = "true" ]
+      COPY +build/devel /opt/rios/devel
+      COPY +build/build /opt/rios/build
+      COPY +build/src /opt/rios/src
     END
 
-unit-tests:
-    FROM +build
-    WORKDIR /opt/rios
-    RUN /bin/bash -c "$MAMBA run -n rios catkin test"
+build:
+    FROM +dep-setup
 
-tag-image: # Use the shared Tag Image code
-    ARG TARGET_MAME=+copy-build
-    FROM $TARGET_MAME
-    ARG CURRENT_REPO
-    ARG CURRENT_BRANCH
-    ARG CURRENT_COMMIT_HASH
-    ARG CURRENT_TAG=latest
-    ARG CURRENT_DATETIME
+    # Build your ros workspace
+    DO ROS1+CATKIN_BUILD --CACHED=$DEV_ENV
+
+unit-test:
+    FROM +build
+    DO ROS1+CATKIN_TEST --TEST_TYPE=unit  
+
+integration-test:
+    FROM +build
+    DO ROS1+CATKIN_TEST --TEST_TYPE=integration
+
+dev-environment:
+    FROM +copy-build
+    
     ARG DEV_ENV=false
     ARG USERNAME
-
-    LABEL buildtime=$CURRENT_DATETIME
     
-    DO  CONDA+EXPORT_ENV
-    IF [ "${DEV_ENV}" = false ]
-      DO CONDA+SETUP_ROS1_ENTRYPOINT
-      DO  RIOS+TAG_IMAGE --BRANCH=$CURRENT_BRANCH --REPO=$CURRENT_REPO --COMMIT=$CURRENT_COMMIT_HASH
-    ELSE
-      DO CONDA+SETUP_DEV_ENV --USERNAME=$USERNAME
-      DO RIOS+TAG_IMAGE --BRANCH=$CURRENT_BRANCH --REPO="$CURRENT_REPO"-development --COMMIT=$CURRENT_COMMIT_HASH
-    END    
+    IF [ "$DEV_ENV" = "true" ]
+        DO RIOS+SETUP_DEV_ENV --USERNAME=$USERNAME
+    END
 
-ADD_TINYXML:
+# These local commands generate the branch/commit/repo information for tagging the image
+build-envs:
+    LOCALLY
+
+    RUN mkdir -p build-envs
+    RUN basename `git rev-parse --show-toplevel` | tr '[:upper:]' '[:lower:]' >> build-envs/CURRENT_REPO
+    RUN git rev-parse --abbrev-ref HEAD | sed 's/\//_/g' >> build-envs/CURRENT_BRANCH
+    RUN git log --pretty=format:"%h" -1 >> build-envs/CURRENT_COMMIT_HASH 
+
+    SAVE ARTIFACT ./build-envs/
+
+    RUN rm -rf build-envs
+
+tag-image: # Use the shared Tag Image code
+    FROM +dev-environment
+
+    COPY +build-envs/build-envs /tmp/build-envs
+    
+    ARG CURRENT_TAG=latest
+    ARG CURRENT_REPO=$(cat /tmp/build-envs/CURRENT_REPO)
+    ARG CURRENT_BRANCH=$(cat /tmp/build-envs/CURRENT_BRANCH)
+    ARG CURRENT_COMMIT_HASH=$(cat /tmp/build-envs/CURRENT_COMMIT_HASH)
+
+    RUN rm -rf /tmp/build-envs
+        
+    ARG CURRENT_DATETIME=$(date +"%s")
+    LABEL buildtime=$CURRENT_DATETIME
+
+    DO RIOS+TAG_IMAGE --BRANCH=$CURRENT_BRANCH --REPO=$CURRENT_REPO --COMMIT=$CURRENT_COMMIT_HASH --TAG=$CURRENT_TAG
+
+    # -debug image builds
+    DO RIOS+ADD_DEVTOOLS
+    DO RIOS+TAG_DEBUG_IMAGE --BRANCH=$CURRENT_BRANCH --REPO=$CURRENT_REPO --COMMIT=$CURRENT_COMMIT_HASH --TAG=$CURRENT_TAG
+
+ADD_AWS_CPP_SDK:
     COMMAND
-    WORKDIR /opt/rios/src
-    GIT CLONE git@github.com:leethomason/tinyxml2.git tinyxml2
-    WORKDIR /opt/rios/src/tinyxml2
+    WORKDIR /opt/rios
 
-    RUN /bin/bash -c "mkdir build \
-                      && cd build \
-                      && ${MAMBA} run -n ${WORKSPACE_NAME} cmake .. -DBUILD_SHARED_LIBS=OFF -DENABLE_PUSH=OFF -DENABLE_COMPRESSION=OFF\
-                      && ${MAMBA} run -n ${WORKSPACE_NAME} cmake --build . --parallel 4 \
-                      && ${MAMBA} run -n ${WORKSPACE_NAME} cmake --install . --prefix /opt/mamba/envs/rios/"
+    RUN /bin/bash -c "git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp \
+                      && mkdir sdk_build \
+                      && cd sdk_build \
+                      && cmake ../aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/usr/local/ -DCMAKE_INSTALL_PREFIX=/usr/local/ -DBUILD_ONLY=\"s3\" \
+                      && make \
+                      && make install \
+                      && cmake ../aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/usr/local/ -DCMAKE_INSTALL_PREFIX=/usr/local/ -DBUILD_ONLY=\"transfer\" \
+                      && make \
+                      && make install"
