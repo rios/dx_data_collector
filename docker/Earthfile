@@ -29,7 +29,7 @@ copy-source:
     FROM +custom-dependencies
     # Uncomment if you wish to copy source from your repository into the RIOS ROS Workspace overlay
     # As written this copies the root directory of your repo directly to /opt/rios/src
-    COPY +save-source/local_source /opt/rios/src/$CURRENT_REPO
+    COPY +save-source/local_source /opt/rios/src/dx_data_collector
 
 # Build step for pulling dependencies
 dep-setup:
