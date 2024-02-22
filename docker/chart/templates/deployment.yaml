@@ -28,6 +28,7 @@ spec:
       containers:
         - name: dx-data-collector
           image: {{ .Values.dockerRegistry }}/dx_data_collector:{{ .Values.containerTag }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
           args: ["/bin/bash", "-c", "roslaunch dx_data_collector dx_data_collector.launch 
                                                                  data_collection_config:=/data-collector/data_collection_config.yaml
                                                                  node_name:={{ .Values.collectorName }} --wait"]
@@ -48,6 +49,8 @@ spec:
             - name: {{ $key }}
               value: "{{ $val }}"
             {{- end }}
+          resources:
+            {{- toYaml . | nindent 12 }}
           securityContext:
             runAsUser: 0
             privileged: true

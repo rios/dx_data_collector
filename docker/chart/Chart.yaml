@@ -4,7 +4,7 @@ description: RIOS Data Collector (dx-data-collector)
 type: application
 
 # Chart Version
-version: 0.0.1
+version: 0.0.2
 
 # Application Version
 appVersion: "0.0.1"

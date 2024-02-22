@@ -5,10 +5,19 @@ replicaCount: 1
 dockerRegistry: "<internal_registry>"
 containerTag: develop
 collectorName: dx_data_collector
+imagePullPolicy: Always
 
 env:
   PYTHONUNBUFFERED: 1
   ROSCONSOLE_STDOUT_LINE_BUFFERED: 1
+
+resources:
+  limits:
+    cpu: 30
+    memory: 48Gi
+  requests:
+    cpu: 2
+    memory: 12Gi
 
 configs: {}
 nameOverride: ""
