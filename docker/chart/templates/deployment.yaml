@@ -49,8 +49,10 @@ spec:
             - name: {{ $key }}
               value: "{{ $val }}"
             {{- end }}
+          {{- with .Values.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
+          {{- end }}
           securityContext:
             runAsUser: 0
             privileged: true
