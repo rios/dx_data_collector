@@ -50,6 +50,13 @@ public:
   const ros::Time& timeRecvd() const;
 
   /**
+   * @brief Set the time the message was received
+   * 
+   * @param time_recvd The time the message was received
+   */
+  void setTimeRecvd(const ros::Time& time_recvd);
+
+  /**
    * @brief Get the name of the topic the message came from
    * 
    * @return const std::string& 

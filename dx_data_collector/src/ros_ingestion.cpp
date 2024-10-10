@@ -48,13 +48,44 @@ rios::data_collector::TopicIngestor::TopicIngestor(const rios::cfg& topic_config
   ROS_INFO_STREAM("Successfully subscribed to " << topic_name_ << (throttle_period_s_ == NO_THROTTLE ? " without a throttle." : " with a throttle period of " + std::to_string(throttle_period_s_) + "s."));
 }
 
-void rios::data_collector::TopicIngestor::topicCallback(const RosMsgParser::ShapeShifter& msg)
+void rios::data_collector::TopicIngestor::topicCallback(const ros::MessageEvent<RosMsgParser::ShapeShifter>& msg_event)
 {
+  const RosMsgParser::ShapeShifter::ConstPtr & msg = msg_event.getConstMessage();
+  boost::shared_ptr<const ros::M_string> const& connection_header = msg_event.getConnectionHeaderPtr();
+
+  // Find the sender in the connection header
+  std::string sender = "unknown";
+  if (connection_header)
+  {
+    ros::M_string::const_iterator it = connection_header->find("callerid");
+    if(it != connection_header->end())
+    {
+      sender = it->second;
+    }
+  }
+
+  bool latched_msg = false;
+  if (connection_header)
+  {
+    ros::M_string::const_iterator it = connection_header->find("latching");
+    if((it != connection_header->end()) && (it->second == "1"))
+    {
+      latched_msg = true;
+    }
+  }
+
   // Parser must be registered
-  parsers_.registerParser(topic_name_, msg);
+  parsers_.registerParser(topic_name_, *msg);
 
   // Add the message to the buffer
-  DxRosMsg::Ptr dx_msg = std::make_shared<DxRosMsg>(topic_name_, msg, *parsers_.getParser(topic_name_));
+  DxRosMsg::Ptr dx_msg = std::make_shared<DxRosMsg>(topic_name_, *msg, *parsers_.getParser(topic_name_));
+
+  if (latched_msg)
+  {
+    ros_data_buffer_.addLatchedMsg(sender, dx_msg);
+  }
+
+  // Regardless - add to buffer in case latched message is constantly published (this may cause some duplicates in the output but it's ok)
   ros_data_buffer_.addMsg(dx_msg);
 }
 
@@ -89,11 +120,38 @@ void rios::data_collector::RosDataBuffer::addMsg(DxRosMsg::Ptr msg)
   data_queue_.push_back(msg);
 }
 
+void rios::data_collector::RosDataBuffer::addLatchedMsg(const std::string& sender_name, DxRosMsg::Ptr msg)
+{
+  std::lock_guard guard(data_mutex_);
+
+  // Add the message to the buffer
+  latched_msg_map_[sender_name] = msg;
+}
+
 bool rios::data_collector::RosDataBuffer::outputData(std::deque<DxRosMsg::Ptr>& out_queue, std::optional<ros::Time> start_time, std::optional<ros::Time> end_time)
 {
   std::lock_guard guard(data_mutex_);
+
+  ROS_INFO_STREAM("ROS Ingestor outputting " << data_queue_.size() << " regular messages and " << latched_msg_map_.size() << " latched messages.");
+
+  /* We want to interleave latched messages and regular messages by their arrival time */
+
+  // Grab the iterator for the start of the latched messages
+  std::unordered_map<std::string, rios::data_collector::DxRosMsg::Ptr>::iterator latched_msg_it = latched_msg_map_.begin();
+
+  // Add all non-latched messages in the window
   for (auto & message : data_queue_)
   {
+    // Add all latched messages that arrived before this message
+    while (latched_msg_it != latched_msg_map_.end() && latched_msg_it->second->timeRecvd() < message->timeRecvd())
+    {
+      // Set the time received to be right before the interlaced message
+      latched_msg_it->second->setTimeRecvd(message->timeRecvd() - ros::Duration(0.0001));
+
+      out_queue.push_back(latched_msg_it->second);
+      latched_msg_it++;
+    }
+
     // If we have no start time or the message time is after the start time, add it to the output queue
     if (!start_time || message->timeRecvd() >= start_time.value())
     {

@@ -11,6 +11,7 @@
 #ifndef __ROS_DATA_INGESTION_H__
 #define __ROS_DATA_INGESTION_H__
 
+#include <unordered_map>
 
 #include <ros/ros.h>
 #include <tf2/buffer_core.h>
@@ -57,6 +58,14 @@ public:
   void addMsg(DxRosMsg::Ptr msg);
 
   /**
+   * @brief Add a latched message to the buffer
+   * 
+   * @param sender_name The sender name
+   * @param msg The message
+   */
+  void addLatchedMsg(const std::string& sender_name, DxRosMsg::Ptr msg);
+
+  /**
    * @brief Output the data in the buffer
    * 
    * @param out_queue The output queue
@@ -80,6 +89,12 @@ private:
    * 
    */
   std::deque<DxRosMsg::Ptr> data_queue_;
+
+  /**
+   * @brief Stores latched messages in list so one can be included in the output each time
+   * 
+   */
+  std::unordered_map<std::string, DxRosMsg::Ptr> latched_msg_map_;
 
   /**
    * @brief The maximum buffer time in seconds
@@ -164,9 +179,9 @@ private:
   /**
    * @brief Callback for the topic
    * 
-   * @param msg The message
+   * @param msg_event The message event
    */
-  void topicCallback(const RosMsgParser::ShapeShifter& msg);
+  void topicCallback(const ros::MessageEvent<RosMsgParser::ShapeShifter>& msg_event);
 
 };
 

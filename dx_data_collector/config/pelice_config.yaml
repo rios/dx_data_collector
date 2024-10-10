@@ -1,0 +1,34 @@
+# Descriptive name for data
+episode_name: vision-playground
+ingestion:
+  # Max time data is stored in memory - this is an upper bound on triggering as well
+  buffer_length_s: 60
+  # List of topics to subscribe to
+  topics:
+
+    - /qc_pelice/image_raw
+
+formatters:
+  - name: json # used for pipelines
+    type: json
+  - name: rosbag # used for pipelines
+    type: rosbag
+
+output:
+  - name: wasabi # used for pipelines
+    type: s3
+    aws_profile: default
+    endpoint_url: https://s3.us-west-1.wasabisys.com
+    bucket: rios
+    env: dev
+    area: pelice_demo
+
+  - name: filesystem # used for pipelines
+    type: filesystem
+    path: /data-collector-fs-data
+
+pipelines:
+  - formatter: json
+    outputter: wasabi
+  - formatter: rosbag
+    outputter: wasabi

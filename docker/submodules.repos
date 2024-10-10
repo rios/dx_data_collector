@@ -8,7 +8,7 @@ repositories:
   dx_rios_utils:
     type: git
     url: git@github.com:rios-ai/dx_rios_utils.git
-    version: feature/json
+    version: develop
     ignore: ['INFRASTRUCTURE']
 
   dx_rios_yaml:

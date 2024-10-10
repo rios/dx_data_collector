@@ -37,6 +37,11 @@ const ros::Time& rios::data_collector::DxRosMsg::timeRecvd() const
   return time_recvd_;
 }
 
+void rios::data_collector::DxRosMsg::setTimeRecvd(const ros::Time& time_recvd)
+{
+  time_recvd_ = time_recvd;
+}
+
 const std::string& rios::data_collector::DxRosMsg::topicName() const
 { 
   return topic_name_;

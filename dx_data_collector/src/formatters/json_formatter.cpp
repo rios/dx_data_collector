@@ -108,7 +108,7 @@ rios::data_collector::FormattedData::Ptr rios::data_collector::JsonFormatter::fo
           img_msg->header.frame_id = std::get<std::string>(msg->parsedMsgData().at("/header/frame_id"));
 
           // Create and store the CV image
-          cv_bridge::CvImageConstPtr cv_image = cv_bridge::toCvShare(img_msg);
+          cv_bridge::CvImageConstPtr cv_image = cv_bridge::toCvShare(img_msg, "bgr8");
 
           images->operator[](img_uuid) = cv_image;  
           *cur_obj = img_uuid;
@@ -125,7 +125,7 @@ rios::data_collector::FormattedData::Ptr rios::data_collector::JsonFormatter::fo
           img_msg->header.frame_id = std::get<std::string>(msg->parsedMsgData().at("/header/frame_id"));
 
           // Create and store the CV image
-          cv_bridge::CvImageConstPtr cv_image = cv_bridge::toCvCopy(img_msg);
+          cv_bridge::CvImageConstPtr cv_image = cv_bridge::toCvCopy(img_msg, "bgr8");
 
           images->operator[](img_uuid) = cv_image;  
           *cur_obj = img_uuid;
