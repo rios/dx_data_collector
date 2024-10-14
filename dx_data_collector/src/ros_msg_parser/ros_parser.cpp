@@ -420,7 +420,7 @@ bool Parser::deserializeIntoFlatMsg(Span<const uint8_t> buffer, FlatMessage* fla
 }
 
 bool Parser::deserializeIntoDxRosMsg(Span<const uint8_t> buffer,
-                                     std::map<std::string, rios::data_collector::FieldData>& parsed_msg_data) const
+                                     std::unordered_map<std::string, rios::data_collector::FieldData>& parsed_msg_data) const
 {
   size_t buffer_offset = 0;
 
@@ -430,6 +430,8 @@ bool Parser::deserializeIntoDxRosMsg(Span<const uint8_t> buffer,
     const ROSMessage* msg_definition = msg_node->value();
     size_t index_s = 0;
     size_t index_m = 0;
+
+    std::string tree_leaf_name;
 
     for (const ROSField& field : msg_definition->fields())
     {
@@ -460,7 +462,7 @@ bool Parser::deserializeIntoDxRosMsg(Span<const uint8_t> buffer,
       if (field.isArray() && builtinSize(field_type.typeID()) == 1)
       {
         // This is a special case of an array of 1 byte data - we assume it is binary data to be interpreted later
-        std::string tree_leaf_name = new_tree_leaf.toStdString();
+        new_tree_leaf.toStr(tree_leaf_name);
         std::string flat_field_name = tree_leaf_name.substr(_topic_name.size(), tree_leaf_name.size() - _topic_name.size());
         parsed_msg_data[flat_field_name] = rios::data_collector::FieldData(Span<const uint8_t>(&buffer[buffer_offset], array_size));
         buffer_offset += array_size;
@@ -487,7 +489,7 @@ bool Parser::deserializeIntoDxRosMsg(Span<const uint8_t> buffer,
             if (string_size > 0)
             {
               const char* buffer_ptr = reinterpret_cast<const char*>(buffer.data() + buffer_offset);
-              std::string tree_leaf_name = new_tree_leaf.toStdString();
+              new_tree_leaf.toStr(tree_leaf_name);
               std::string flat_field_name = tree_leaf_name.substr(_topic_name.size(), tree_leaf_name.size() - _topic_name.size());
               parsed_msg_data[flat_field_name] = rios::data_collector::FieldData(std::string(buffer_ptr, string_size));
             }
@@ -496,7 +498,7 @@ bool Parser::deserializeIntoDxRosMsg(Span<const uint8_t> buffer,
           }
           else if (field_type.isBuiltin())
           {
-            std::string tree_leaf_name = new_tree_leaf.toStdString();
+            new_tree_leaf.toStr(tree_leaf_name);
             std::string flat_field_name = tree_leaf_name.substr(_topic_name.size(), tree_leaf_name.size() - _topic_name.size());
             parsed_msg_data[flat_field_name] = ReadFromBufferToDxFieldData(field_type.typeID(), buffer, buffer_offset);
           }

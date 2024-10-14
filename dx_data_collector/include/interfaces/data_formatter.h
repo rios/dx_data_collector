@@ -59,10 +59,11 @@ public:
    * @brief Format the data as desired
    * 
    * @param data_queue The queue of messages
+   * @param params The parameters coming from ROS
    * @param snapshot_name The name of the snapshot to format
    * @return the formatted data 
    */
-  virtual FormattedData::Ptr formatData(std::deque<DxRosMsg::Ptr>& data_queue, std::string snapshot_name) = 0;
+  virtual FormattedData::Ptr formatData(std::deque<DxRosMsg::Ptr>& data_queue, std::unordered_map<std::string, std::shared_ptr<std::string>> params, std::string snapshot_name) = 0;
 
 };
 

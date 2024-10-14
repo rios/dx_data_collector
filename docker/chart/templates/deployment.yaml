@@ -6,6 +6,8 @@ metadata:
     {{- include "dx-data-collector.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       {{- include "dx-data-collector.selectorLabels" . | nindent 6 }}
@@ -45,6 +47,8 @@ spec:
               value: dx-data-collector
             - name: RIOS_SUBSYSTEM_INSTANCE
               value: {{ include "dx-data-collector.name" . }}
+            # - name: LIBVA_DRIVERS_PATH
+            #   value: /usr/lib/x86_64-linux-gnu/dri
             {{- range $key, $val := .Values.env }}
             - name: {{ $key }}
               value: "{{ $val }}"

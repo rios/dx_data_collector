@@ -29,6 +29,7 @@ copy-source:
     FROM +custom-dependencies
     # Uncomment if you wish to copy source from your repository into the RIOS ROS Workspace overlay
     # As written this copies the root directory of your repo directly to /opt/rios/src
+    RUN --no-cache echo "go away cache!"
     COPY +save-source/local_source /opt/rios/src/dx_data_collector
 
 # Build step for pulling dependencies
@@ -36,6 +37,7 @@ dep-setup:
     FROM +copy-source
 
     DO RIOS+RECURSIVE_PULL_DEPS
+    DO +ADD_INTEL_HARDWARE_ENCODING
     DO +ADD_AWS_CPP_SDK
     DO ROS1+CATKIN_CREATE
 
@@ -120,9 +122,31 @@ ADD_AWS_CPP_SDK:
     RUN /bin/bash -c "git clone --depth 1 --branch 1.11.260 --recurse-submodules https://github.com/aws/aws-sdk-cpp \
                       && mkdir sdk_build \
                       && cd sdk_build \
-                      && cmake ../aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/usr/local/ -DCMAKE_INSTALL_PREFIX=/usr/local/ -DBUILD_ONLY=\"s3\" \
+                      && cmake ../aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/usr/local/ -DCMAKE_INSTALL_PREFIX=/usr/local/ -DBUILD_ONLY=\"s3\" -DENABLE_TESTING=OFF \
                       && make \
                       && make install \
-                      && cmake ../aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/usr/local/ -DCMAKE_INSTALL_PREFIX=/usr/local/ -DBUILD_ONLY=\"transfer\" \
+                      && cmake ../aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/usr/local/ -DCMAKE_INSTALL_PREFIX=/usr/local/ -DBUILD_ONLY=\"transfer\" -DENABLE_TESTING=OFF \
                       && make \
                       && make install"
+
+ADD_INTEL_HARDWARE_ENCODING:
+    COMMAND
+    RUN /bin/bash -c "sudo apt-get install -y gpg-agent wget && \
+                      wget -qO - https://repositories.intel.com/graphics/intel-graphics.key | \
+                      sudo gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
+                      echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/graphics/ubuntu focal-legacy main' | \
+                      sudo tee  /etc/apt/sources.list.d/intel.gpu.focal.list && \
+                      sudo apt-get update && \
+                      sudo apt-get install -y \
+                      intel-opencl-icd \
+                      intel-level-zero-gpu level-zero \
+                      intel-media-va-driver-non-free libmfx1 libmfxgen1 libvpl2 libvpl-dev"
+
+    WORKDIR /opt/rios
+
+    RUN /bin/bash -c "wget https://ffmpeg.org/releases/ffmpeg-7.0.1.tar.xz && \
+                      tar -xf ffmpeg-7.0.1.tar.xz && \
+                      cd ffmpeg-7.0.1 && \
+                      ./configure --enable-libvpl --enable-nonfree --enable-static --disable-shared --enable-libx264 --enable-gpl &&\
+                      make && \
+                      sudo make install" 

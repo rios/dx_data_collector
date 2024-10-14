@@ -1,0 +1,57 @@
+# Descriptive name for data
+episode_name: test_data
+ingestion:
+  # continuous - data is stored in memory in a circular buffer and outputted continuously ever buffer_length_s
+  continuous_mode: true
+  # Max time data is stored in memory - this is an upper bound on triggering as well
+  buffer_length_s: 15
+  # List of topics to subscribe to
+  topics:
+    - /camera_1/camera_info
+    - /camera_1/image_raw
+    - /camera_1/image_raw/compressed
+    - /camera_3/camera_info
+    - /camera_3/image_raw
+  params:
+    - /rosdistro
+
+  # Schedule collection pause/resume events in local time
+  schedule:
+    - time: "11:59:32"
+      days: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+      action: "pause" # pause or resume
+    - time: "11:59:35"
+      days: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+      action: "resume" # pause or resume
+   
+formatters:
+  - name: dummy
+    type: dummy
+  - name: ia # used for pipelines
+    type: ia
+    codec: libx264 # Video codec to use. There are lots of them. You can use `ffmpeg -codecs` to list them all
+    pixel_format: yuv420p # Pixel format for video encoding
+    #bitrate: 5000000 # Bitrate for video encoding
+    out_fps: 60 # Output frames per second
+    codec_options: # Any options to pass to encoder. Available options: `ffmpeg -h encoder=libx264`
+      preset: "slow"
+  
+output:
+  - name: dummy
+    type: dummy
+
+  - name: wasabi # used for pipelines
+    type: s3
+    aws_profile: wasabi
+    endpoint_url: https://s3.us-west-1.wasabisys.com
+    bucket: rios-data-collector-testing
+    env: dev
+    area: test-collection
+
+  - name: filesystem # used for pipelines
+    type: filesystem
+    path: /tmp
+
+pipelines:
+  - formatter: ia
+    outputter: filesystem

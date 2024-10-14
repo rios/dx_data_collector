@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.16)
 project(dx_data_collector)
 
 add_compile_options(-std=c++17)
@@ -18,6 +18,32 @@ find_package(
 )
 
 find_package(aws-cpp-sdk-core REQUIRED aws-cpp-sdk-s3 aws-cpp-sdk-transfer)
+find_package(VPL REQUIRED)
+
+find_library(AVCODEC_LIBRARY avcodec)
+find_library(AVFORMAT_LIBRARY avformat)
+find_library(AVUTIL_LIBRARY avutil)
+find_library(SWSCALE_LIBRARY swscale)
+find_library(BZ2_LIBRARY bz2)
+find_library(ZLIB_LIBRARY z)
+find_library(LZMA_LIBRARY lzma)
+find_library(VA_LIBRARY va)
+find_library(SWRESAMPLE_LIBRARY swresample)
+find_library(VPL_LIBRARY vpl)
+find_library(DRM_LIBRARY drm)
+find_library(X11_LIBRARY X11)
+find_library(VA_DRM_LIBRARY va-drm)
+find_library(VA_X11_LIBRARY va-x11)
+find_library(LIBX264 x264)
+find_library(MFX_LIBRARY mfx HINTS /opt/intel/mediasdk/lib)
+
+include_directories(
+  include 
+  include/dx_data_collector
+  ${catkin_INCLUDE_DIRS}
+  ${AWSSDK_INCLUDE_DIRS}
+  /usr/include/vpl
+)
 
 add_executable(dx_data_collector_node src/dx_data_collector_node.cpp
                                       src/ros_ingestion.cpp
@@ -25,6 +51,7 @@ add_executable(dx_data_collector_node src/dx_data_collector_node.cpp
                                       src/data_types/field_data.cpp
                                       src/formatters/json_formatter.cpp
                                       src/formatters/rosbag_formatter.cpp
+                                      src/formatters/ia_formatter.cpp
                                       src/outputters/s3_outputter.cpp
                                       src/outputters/fs_outputter.cpp
                                       src/ros_msg_parser/ros_type.cpp
@@ -34,17 +61,15 @@ add_executable(dx_data_collector_node src/dx_data_collector_node.cpp
                                       src/ros_msg_parser/stringtree_leaf.cpp)
 
 target_link_libraries(
-  dx_data_collector_node ${catkin_LIBRARIES} aws-cpp-sdk-core aws-cpp-sdk-s3 aws-cpp-sdk-transfer
+  dx_data_collector_node ${catkin_LIBRARIES} 
+                         aws-cpp-sdk-core aws-cpp-sdk-s3 aws-cpp-sdk-transfer 
+                         ${AVFORMAT_LIBRARY} ${AVCODEC_LIBRARY} ${AVUTIL_LIBRARY} ${SWSCALE_LIBRARY}
+                         ${BZ2_LIBRARY} ${ZLIB_LIBRARY} ${LZMA_LIBRARY} ${VA_LIBRARY} ${SWRESAMPLE_LIBRARY} 
+                         ${VPL_LIBRARY} ${DRM_LIBRARY} ${X11_LIBRARY} ${VA_DRM_LIBRARY} ${VA_X11_LIBRARY}
+                         ${MFX_LIBRARY} ${LIBX264}
 )
 
 catkin_package()
-
-include_directories(
-  include 
-  include/dx_data_collector
-  ${catkin_INCLUDE_DIRS}
-  ${AWSSDK_INCLUDE_DIRS}
-)
 
 install(DIRECTORY launch config DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 

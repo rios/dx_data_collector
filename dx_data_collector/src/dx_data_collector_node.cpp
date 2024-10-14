@@ -16,9 +16,12 @@
 
 #include "ros_ingestion.h"
 
+#include "formatters/dummy_formatter.h"
 #include "formatters/json_formatter.h"
 #include "formatters/rosbag_formatter.h"
+#include "formatters/ia_formatter.h"
 
+#include "outputters/dummy_outputter.h"
 #include "outputters/s3_outputter.h"
 #include "outputters/fs_outputter.h"
 
@@ -30,8 +33,10 @@ FormatterType* createFormatter(const rios::cfg& formatter_config) {return new Fo
 
 const std::map<std::string, std::function<rios::data_collector::DataFormatter* (const rios::cfg&)>> cpp_formatters = 
 {
+    {"dummy", &createFormatter<rios::data_collector::DummyFormatter>}, // The key matches the 'type' in the config
     {"json", &createFormatter<rios::data_collector::JsonFormatter>}, // The key matches the 'type' in the config
-    {"rosbag", &createFormatter<rios::data_collector::RosbagFormatter>}
+    {"rosbag", &createFormatter<rios::data_collector::RosbagFormatter>},
+    {"ia", &createFormatter<rios::data_collector::IAFormatter>}
 };
 
 /**
@@ -42,6 +47,7 @@ OutputterType* createOutputter(const rios::cfg& output_config) {return new Outpu
 
 const std::map<std::string, std::function<rios::data_collector::DataOutputter* (const rios::cfg&)>> cpp_outputters = 
 {
+    {"dummy", &createOutputter<rios::data_collector::DummyOutputter>}, // The key matches the 'type' in the config
     {"s3", &createOutputter<rios::data_collector::S3Outputter>}, // The key matches the 'type' in the config
     {"filesystem", &createOutputter<rios::data_collector::FilesystemOutputter>}
 };
@@ -105,17 +111,31 @@ int setupPipelines(rios::cfg& collection_config,
         rios::data_collector::DataOutputter* outputter = cpp_outputters.at(outputter_type)(outputters_configured[outputter_name]);
 
         ingestor.registerStoreCallback(
-            [formatter_name, outputter_name, formatter, outputter, &collection_config](std::deque<rios::data_collector::DxRosMsg::Ptr> data, std::string snapshot_name)
+            [formatter_name, outputter_name, formatter, outputter, &collection_config](std::deque<rios::data_collector::DxRosMsg::Ptr> data, std::unordered_map<std::string, std::shared_ptr<std::string>> params, std::string snapshot_name)
             {
                 // Start a thread to do data formatting and output
                 ROS_INFO_STREAM("[" << formatter_name << " -> " << outputter_name << "] Data store beginning for " << data.size() << " messages. Snapshot: " << snapshot_name);
 
                 std::thread(
-                    [formatter_name, outputter_name, formatter, outputter, &collection_config, data, snapshot_name]() mutable
+                    [formatter_name, outputter_name, formatter, outputter, &collection_config, data, params, snapshot_name]() mutable
                     {
                         // Format the data 
                         auto start = std::chrono::steady_clock::now();
-                        rios::data_collector::FormattedData::Ptr formatted_data = formatter->formatData(data, snapshot_name);
+                        rios::data_collector::FormattedData::Ptr  formatted_data;
+                        try
+                        {
+                            formatted_data = formatter->formatData(data, params, snapshot_name);
+                        }
+                        catch (const std::exception& e)
+                        {
+                            ROS_ERROR_STREAM("[" << formatter_name << "] Formatting failed with exception: " << e.what() << ". Exiting pipeline.");
+                            return;
+                        }
+                        if (formatted_data == nullptr)
+                        {
+                            ROS_ERROR_STREAM("[" << formatter_name << "] Formatting failed. Exiting pipeline.");
+                            return;
+                        }
                         auto end = std::chrono::steady_clock::now();
                         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
                         ROS_INFO_STREAM("[" << formatter_name << "] Formatting took " << elapsed << "ms"); 
@@ -123,7 +143,16 @@ int setupPipelines(rios::cfg& collection_config,
                         // Output the data
                         start = std::chrono::steady_clock::now();
                         std::string error_str;
-                        bool out_success = outputter->outputData(snapshot_name, formatted_data, error_str);
+                        bool out_success;
+                        try
+                        {
+                            out_success = outputter->outputData(snapshot_name, formatted_data, error_str);
+                        }
+                        catch (const std::exception& e)
+                        {
+                            ROS_ERROR_STREAM("[" << outputter_name << "] Outputting failed with exception: " << e.what());
+                            return;
+                        }
                         end = std::chrono::steady_clock::now();
                         elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
                         if (out_success)

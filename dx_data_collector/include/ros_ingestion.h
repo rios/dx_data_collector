@@ -11,6 +11,7 @@
 #ifndef __ROS_DATA_INGESTION_H__
 #define __ROS_DATA_INGESTION_H__
 
+#include <chrono>
 #include <unordered_map>
 
 #include <ros/ros.h>
@@ -66,15 +67,30 @@ public:
   void addLatchedMsg(const std::string& sender_name, DxRosMsg::Ptr msg);
 
   /**
+   * @brief Register a callback to call when the buffer is full. It will be called the first time the buffer is full and then subsequently when the whole buffer has been erased and is full with new data
+   * 
+   * @param callback The callback function
+   */
+  void registerBufferFullCallback(std::function<void ()> callback);
+
+  /**
+   * @brief Register a parameter to fetch from ROS on every output
+   * 
+   * @param param The parameter name
+   */
+  void registerParam(const std::string& param);
+
+  /**
    * @brief Output the data in the buffer
    * 
    * @param out_queue The output queue
+   * @param params The parameter values that were configured to be fetched from ROS
    * @param start_time The start time. Optional (defaults to start of buffer)
    * @param end_time The end time. Optional (defaults to end of buffer)
    * @return true Success
    * @return false Failure
    */
-  bool outputData(std::deque<DxRosMsg::Ptr>& out_queue, std::optional<ros::Time> start_time = std::nullopt, std::optional<ros::Time> end_time = std::nullopt);
+  bool outputData(std::deque<DxRosMsg::Ptr>& out_queue, std::unordered_map<std::string, std::shared_ptr<std::string>>& params, std::optional<ros::Time> start_time = std::nullopt, std::optional<ros::Time> end_time = std::nullopt);
 
 private:
 
@@ -114,6 +130,30 @@ private:
    */
   ros::Timer buffer_clean_timer_;
 
+  /**
+   * @brief Callbacks to call when the buffer fills up from last full
+   * 
+   */ 
+  std::vector<std::function<void ()>> buffer_full_callbacks_;
+
+  /**
+   * @brief The last message in the queue when the last buffer full callback was called 
+   * 
+   */
+  DxRosMsg::Ptr last_msg_in_queue_when_last_notified_;
+
+  /**
+   * @brief Whether to notify before the next time we delete a message
+   * 
+   */
+  bool notify_next_delete_;
+
+  /**
+   * @brief Parameters to fetch from ROS
+   * 
+   */
+  std::list<std::string> params_to_fetch_;
+
 };
 
 /**
@@ -135,10 +175,23 @@ public:
    */
   TopicIngestor(const rios::cfg& topic_config, RosDataBuffer& ros_data_buffer);
 
+  /**
+   * @brief Pause all ingestion
+   * 
+   */
+  static void pause();
+
+  /**
+   * @brief Resume all ingestion
+   * 
+   */
+  static void resume();
+
 private:
 
   static constexpr float NO_THROTTLE = -1.0;
   static constexpr int MSG_QUEUE_LENGTH = 1000;
+  static bool paused_;
 
   /**
    * @brief The nodehandle
@@ -209,10 +262,47 @@ public:
    * 
    * @param callback The callback function
   */
-  void registerStoreCallback(std::function<void (std::deque<DxRosMsg::Ptr>, const std::string&)> callback);
+  void registerStoreCallback(std::function<void (std::deque<DxRosMsg::Ptr>, std::unordered_map<std::string, std::shared_ptr<std::string>>, const std::string&)> callback);
 
 
 private:
+
+  class ScheduleEvent
+  {
+  public:
+    DECLARE_SMART_PTR(ScheduleEvent)
+
+  public:
+    /**
+     * @brief Construct a new Schedule Event object
+     * 
+     * @param schedule_config The config for the schedule event
+     * @param action_callback The callback to call when the action is triggered
+     */
+    ScheduleEvent(const rios::cfg& schedule_config, std::function<void (const std::string&)> action_callback);
+
+    /**
+     * @brief Get the last time the action was triggered
+     * 
+     * @return std::chrono::system_clock::time_point The last time the action was triggered
+     */
+    std::chrono::system_clock::time_point getLastTime() const;
+
+    /**
+     * @brief Get the action
+     * 
+     * @return const std::string& The action
+     */
+    const std::string& getAction() const;
+
+  private:
+    const rios::cfg& schedule_config_;
+    std::string action_;
+    std::set<std::chrono::system_clock::time_point> schedule_times_;
+    std::vector<std::function<void (const std::string&)>> action_callbacks_;
+    ros::Timer schedule_timer_;
+    ros::NodeHandle nh_;
+  };
 
   ros::NodeHandle nh_;
 
@@ -238,7 +328,7 @@ private:
    * @brief Callbacks to call when the data should be stored
    * 
    */ 
-  std::vector<std::function<void (std::deque<DxRosMsg::Ptr>, const std::string&)>> store_callbacks_;
+  std::vector<std::function<void (std::deque<DxRosMsg::Ptr>, std::unordered_map<std::string, std::shared_ptr<std::string>>, const std::string&)>> store_callbacks_;
 
   /**
    * @brief Service to take a snapshot of the data
@@ -271,6 +361,12 @@ private:
   std::shared_ptr <tf2_ros::TransformListener> tf_listener_;
 
   /**
+   * @brief Schedule events
+   * 
+   */
+  std::vector<ScheduleEvent::Ptr> schedule_events_;
+
+  /**
    * @brief Callback for the snapshot service
    * 
    * @param req The request
@@ -279,6 +375,17 @@ private:
    * @return false Failure
    */
   bool snapshotCallback(dx_data_collector_msgs::Snapshot::Request& req, dx_data_collector_msgs::Snapshot::Response& res);
+
+  /**
+   * @brief Output data from the buffer
+   * 
+   * @param start_time Start time for the data. If not supplied, beginning of buffer
+   * @param end_time End time for the data. If not supplied, end of buffer
+   * @param snapshot_name The name of the snapshot
+   * @return true Successfully output data
+   * @return false Could not output data
+   */
+  bool outputData(std::optional<ros::Time> start_time = std::nullopt, std::optional<ros::Time> end_time = std::nullopt, const std::string& snapshot_name = "");
 
     /**
    * @brief Callback for the get_time service

@@ -1,6 +1,10 @@
 # Descriptive name for data
 episode_name: test_data
 ingestion:
+  # The output mode for the data
+  # triggered - data is stored in memory in a circular buffer and only outputted when a trigger is received
+  # continuous - data is stored in memory in a circular buffer and outputted continuously ever buffer_length_s
+  output_mode: continuous
   # Max time data is stored in memory - this is an upper bound on triggering as well
   buffer_length_s: 10
   # List of topics to subscribe to

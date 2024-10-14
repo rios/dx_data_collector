@@ -6,7 +6,7 @@ rios::data_collector::JsonFormatter::JsonFormatter(const rios::cfg& json_formatt
 
 }
 
-rios::data_collector::FormattedData::Ptr rios::data_collector::JsonFormatter::formatData(std::deque<DxRosMsg::Ptr>& data_queue, std::string snapshot_name)
+rios::data_collector::FormattedData::Ptr rios::data_collector::JsonFormatter::formatData(std::deque<DxRosMsg::Ptr>& data_queue, std::unordered_map<std::string, std::shared_ptr<std::string>> params, std::string snapshot_name)
 {
   std::string episode_uuid = boost::uuids::to_string(boost::uuids::random_generator()());
 
@@ -233,7 +233,7 @@ bool rios::data_collector::JsonData::asFiles(std::filesystem::path path)
   {
     std::filesystem::path current_path = path;
     std::string msg_type = msg_json["type"].get<std::string>();
-    for (auto & folder_name : rios::utils::getTokens(msg_type, "/"))
+    for (auto & folder_name : rios::utils::getTokens(msg_type, '/'))
     {
       current_path = current_path / folder_name;
       if (!std::filesystem::exists(current_path) && !std::filesystem::create_directory(current_path))

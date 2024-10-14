@@ -31,7 +31,7 @@ public:
    * 
    */
   DxRosMsg(const std::string& topic_name, 
-           const RosMsgParser::ShapeShifter& msg,
+           const RosMsgParser::ShapeShifter::ConstPtr msg,
            const RosMsgParser::Parser& msg_parser,
            std::optional<ros::Time> time_recvd = std::nullopt);
 
@@ -40,7 +40,7 @@ public:
    * 
    * @return const std::map<std::string, FieldData>& The parsed message data 
    */
-  const std::map<std::string, FieldData>& parsedMsgData();
+  const std::unordered_map<std::string, FieldData>& parsedMsgData();
 
   /**
    * @brief Get the time the message was received
@@ -48,6 +48,13 @@ public:
    * @return const Ros::Time& The time the message was received
    */
   const ros::Time& timeRecvd() const;
+
+  /**
+   * @brief Get the time the message was sent. If there's no header, the time the message was received is used instead
+   * 
+   * @return const ros::Time& The time the message was sent
+   */
+  const ros::Time& msgTime();
 
   /**
    * @brief Set the time the message was received
@@ -111,10 +118,16 @@ private:
   const RosMsgParser::Parser& msg_parser_;
 
   /**
+   * @brief Pointer to the message coming from ROS - so it doesn't get deleted until we're done with it
+   * 
+   */
+  const RosMsgParser::ShapeShifter::ConstPtr msg_;
+
+  /**
    * @brief Pointer to binary message data
    * 
    */
-  std::unique_ptr<uint8_t[]> data_;
+  const uint8_t * data_;
 
   /**
    * @brief Raw binary data from message
@@ -129,6 +142,12 @@ private:
   ros::Time time_recvd_;
 
   /**
+   * @brief The time the message was sent
+   * 
+   */
+  ros::Time msg_time_;
+
+  /**
    * @brief Whether the message is parsed
    * 
    */
@@ -138,7 +157,7 @@ private:
    * @brief A map of all parsed message data
    * 
    */
-  std::map<std::string, FieldData> parsed_msg_data_;
+  std::unordered_map<std::string, FieldData> parsed_msg_data_;
   
 };
 

@@ -6,7 +6,7 @@ rios::data_collector::RosbagFormatter::RosbagFormatter(const rios::cfg& rosbag_f
 
 }
 
-rios::data_collector::FormattedData::Ptr rios::data_collector::RosbagFormatter::formatData(std::deque<DxRosMsg::Ptr>& data_queue, std::string snapshot_name)
+rios::data_collector::FormattedData::Ptr rios::data_collector::RosbagFormatter::formatData(std::deque<DxRosMsg::Ptr>& data_queue, std::unordered_map<std::string, std::shared_ptr<std::string>> params, std::string snapshot_name)
 {
   // Create a temporary directory to store the bag file - use UUID as this formatter could run simultaneously from different threads
   std::filesystem::path temp_storage = "/tmp/" + boost::uuids::to_string(boost::uuids::random_generator()()) + "/";

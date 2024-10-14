@@ -155,7 +155,7 @@ public:
                               FlatMessage* flat_container_output) const;
 
   bool deserializeIntoDxRosMsg(Span<const uint8_t> buffer,
-                               std::map<std::string, rios::data_collector::FieldData>& parsed_msg_data) const;
+                               std::unordered_map<std::string, rios::data_collector::FieldData>& parsed_msg_data) const;
 
   std::shared_ptr<rapidjson::Document> deserializeIntoJson(Span<const uint8_t> buffer) const;
 
