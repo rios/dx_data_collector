@@ -146,7 +146,7 @@ int setupPipelines(rios::cfg& collection_config,
                         bool out_success;
                         try
                         {
-                            out_success = outputter->outputData(snapshot_name, formatted_data, error_str);
+                            out_success = outputter->outputData(collection_config["episode_name"].as<std::string>(), formatted_data, error_str);
                         }
                         catch (const std::exception& e)
                         {
