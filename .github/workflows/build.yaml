@@ -8,7 +8,7 @@ on:
       - 'main'
       - 'develop'
   schedule:
-    - cron: '0 16 * * *' # Run every Sat at 4pm UTC
+    - cron: '0 16 * * 6' # Run every Sat at 4pm UTC
 jobs:
   build:
     uses: ./.github/workflows/rios_build.yaml

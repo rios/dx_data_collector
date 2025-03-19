@@ -31,9 +31,10 @@ spec:
         - name: dx-data-collector
           image: {{ .Values.dockerRegistry }}/dx_data_collector:{{ .Values.containerTag }}
           imagePullPolicy: {{ .Values.imagePullPolicy }}
-          args: ["/bin/bash", "-c", "roslaunch dx_data_collector dx_data_collector.launch 
-                                                                 data_collection_config:=/data-collector/data_collection_config.yaml
-                                                                 node_name:={{ .Values.collectorName }} --wait"]
+          args: ["/bin/bash", "-c", "roslaunch dx_data_collector dx_data_collector.launch \
+                                       data_collection_config:=/data-collector/data_collection_config.yaml
+                                       node_name:={{ .Values.collectorName }} --wait  2>&1 | \
+                                       rotatelogs -e -l '/logs/data_collector_%Y-%m-%d_%H-%M-%S.log' {{ .Values.logSize }}"]
           env:
             - name: AWS_SHARED_CREDENTIALS_FILE 
               value: "/vault/secrets/wasabi-access.yaml" 
@@ -62,6 +63,10 @@ spec:
             privileged: true
             allowPrivilegeEscalation: true
           volumeMounts:
+          - name: log-storage
+            mountPath: /logs
+          - name: core-dump-storage
+            mountPath: /core-dump
           - name: data-collector-config
             mountPath: /data-collector/
             readOnly: false
@@ -86,13 +91,21 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 5
       volumes:
+        - name: log-storage
+          hostPath:
+            path: {{ .Values.logPath }}/{{ include "dx-data-collector.fullname" . }}
+            type: DirectoryOrCreate
+        - name: core-dump-storage
+          hostPath:
+            path: {{ .Values.coreDumpPath }}/{{ include "dx-data-collector.fullname" . }}
+            type: DirectoryOrCreate
         - name: data-collector-config
           configMap:
             name: {{ include "dx-data-collector.fullname" . }}-config
         - name: fs-output-dir
-          hostPath: 
+          hostPath:
             path: {{ .Values.fsOutputDir }}
-            type: DirectoryOrCreate   
+            type: DirectoryOrCreate
       {{- with .Values.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
