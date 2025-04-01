@@ -5,11 +5,13 @@ on:
     tags:
       - "v*.*.*"
 
-jobs: 
+jobs:
   release:
-    uses: ./.github/workflows/rios_release.yaml
+    uses: rios-ai/<internal_workflow_templates>/.github/workflows/rios_release.yaml@develop
     with:
-      working-directory: dx_data_collector
+      # platform: linux/arm/v7 # Uncomment if you wish to build on ARM
+      working-directory: .
+      runs_on: "['AWS', 'ci2']"
     secrets:
       ssh-key: ${{ secrets.CI_SSH_KEY }}
       bot-token: ${{ secrets.RIOS_BOT_TOKEN }}

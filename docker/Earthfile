@@ -3,9 +3,10 @@ VERSION 0.7
 IMPORT --allow-privileged github.com/rios-ai/<internal_build_framework> AS RIOS
 IMPORT --allow-privileged github.com/rios-ai/<internal_build_framework>/ros1 AS ROS1
 
-FROM RIOS+rios-ros
+ARG --global DEV_ENV=false
+ARG BASE_IMAGE=RIOS+rios-ros
 
-ARG DEV_ENV=false --global
+FROM $BASE_IMAGE
 
 # Custom dependencies needed for this specific ROS Node
 custom-dependencies:
@@ -21,16 +22,24 @@ custom-dependencies:
 
 # Build step saves the source code to an artifact for copying into the image (+copy-source step)
 save-source:
+    ARG CACHE_BUSTER
+
     LOCALLY
-    SAVE ARTIFACT ../ local_source
+    SAVE ARTIFACT ../ local_source_${CACHE_BUSTER}
 
 # Build step copies the saved source code into the image
 copy-source:
     FROM +custom-dependencies
+    ARG CACHE_BUSTER
+
+    IF [ -z "$CACHE_BUSTER" ]
+        # This is to workaround the bug described in https://github.com/earthly/earthly/issues/1076
+        RUN echo "CACHE_BUSTER must be set as --CACHE_BUSTER=$RANDOM when calling the build command." && exit 1
+    END
+
     # Uncomment if you wish to copy source from your repository into the RIOS ROS Workspace overlay
     # As written this copies the root directory of your repo directly to /opt/rios/src
-    RUN --no-cache echo "go away cache!"
-    COPY +save-source/local_source /opt/rios/src/dx_data_collector
+    COPY +save-source/local_source_${CACHE_BUSTER} /opt/rios/src/dx_data_collector
 
 # Build step for pulling dependencies
 dep-setup:
@@ -43,7 +52,7 @@ dep-setup:
 
 copy-build:
     FROM +dep-setup
-    
+
     WAIT
       # Build the project
       BUILD +build
@@ -64,11 +73,11 @@ build:
     DO ROS1+CATKIN_BUILD --CACHED=$DEV_ENV
 
 unit-test:
-    FROM +build
-    DO ROS1+CATKIN_TEST --TEST_TYPE=unit  
+    FROM +dep-setup
+    DO ROS1+CATKIN_TEST --TEST_TYPE=unit
 
 integration-test:
-    FROM +build
+    FROM +dep-setup
     DO ROS1+CATKIN_TEST --TEST_TYPE=integration
 
 dev-environment:
@@ -94,18 +103,48 @@ build-envs:
 
     RUN rm -rf build-envs
 
+# Create a base image with all dependencies installed without building the src code.
+tag-base-image:
+    ARG ROS_VERSION=noetic
+
+    FROM +copy-source
+    DO RIOS+RECURSIVE_PULL_DEPS
+    DO ROS1+CATKIN_ROSDEPS --ROS_VERSION=${ROS_VERSION}
+    DO +ADD_INTEL_HARDWARE_ENCODING
+    DO +ADD_AWS_CPP_SDK
+
+    # Remove src used for installing dependencies.
+    WORKDIR /opt/rios
+    RUN rm -rf /opt/rios/src
+
+    COPY +build-envs/build-envs /tmp/build-envs
+
+    ARG CURRENT_TAG=latest
+
+    # Base image tags are suffixed with -base
+    ARG CURRENT_REPO=$(cat /tmp/build-envs/CURRENT_REPO)-base
+    ARG CURRENT_BRANCH=$(cat /tmp/build-envs/CURRENT_BRANCH)
+    ARG CURRENT_COMMIT_HASH=$(cat /tmp/build-envs/CURRENT_COMMIT_HASH)
+
+    RUN rm -rf /tmp/build-envs
+
+    ARG CURRENT_DATETIME=$(date +"%s")
+    LABEL buildtime=$CURRENT_DATETIME
+
+    DO RIOS+TAG_IMAGE --BRANCH=$CURRENT_BRANCH --REPO=$CURRENT_REPO --COMMIT=$CURRENT_COMMIT_HASH --TAG=$CURRENT_TAG
+
 tag-image: # Use the shared Tag Image code
     FROM +dev-environment
 
     COPY +build-envs/build-envs /tmp/build-envs
-    
+
     ARG CURRENT_TAG=latest
     ARG CURRENT_REPO=$(cat /tmp/build-envs/CURRENT_REPO)
     ARG CURRENT_BRANCH=$(cat /tmp/build-envs/CURRENT_BRANCH)
     ARG CURRENT_COMMIT_HASH=$(cat /tmp/build-envs/CURRENT_COMMIT_HASH)
 
     RUN rm -rf /tmp/build-envs
-        
+
     ARG CURRENT_DATETIME=$(date +"%s")
     LABEL buildtime=$CURRENT_DATETIME
 
@@ -131,13 +170,13 @@ ADD_AWS_CPP_SDK:
 
 ADD_INTEL_HARDWARE_ENCODING:
     COMMAND
-    RUN /bin/bash -c "sudo apt-get install -y gpg-agent wget && \
+    RUN /bin/bash -c "sudo apt-get -qq install -y gpg-agent wget && \
                       wget -qO - https://repositories.intel.com/graphics/intel-graphics.key | \
                       sudo gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
                       echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/graphics/ubuntu focal-legacy main' | \
                       sudo tee  /etc/apt/sources.list.d/intel.gpu.focal.list && \
-                      sudo apt-get update && \
-                      sudo apt-get install -y \
+                      sudo apt-get -qq update && \
+                      sudo apt-get -qq install -y \
                       intel-opencl-icd \
                       intel-level-zero-gpu level-zero \
                       intel-media-va-driver-non-free libmfx1 libmfxgen1 libvpl2 libvpl-dev"
@@ -149,4 +188,4 @@ ADD_INTEL_HARDWARE_ENCODING:
                       cd ffmpeg-7.0.1 && \
                       ./configure --enable-libvpl --enable-nonfree --enable-static --disable-shared --enable-libx264 --enable-gpl &&\
                       make && \
-                      sudo make install" 
+                      sudo make install"
