@@ -5,7 +5,7 @@ replicaCount: 1
 dockerRegistry: "<internal_registry>"
 containerTag: develop
 collectorName: dx_data_collector
-imagePullPolicy: Always
+imagePullPolicy: IfNotPresent
 
 logPath: "/data-pool/logs"
 coreDumpPath: "/data-pool/core-dump"

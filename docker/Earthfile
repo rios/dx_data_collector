@@ -82,10 +82,10 @@ integration-test:
 
 dev-environment:
     FROM +copy-build
-    
+
     ARG DEV_ENV=false
     ARG USERNAME
-    
+
     IF [ "$DEV_ENV" = "true" ]
         DO RIOS+SETUP_DEV_ENV --USERNAME=$USERNAME
     END
@@ -97,7 +97,7 @@ build-envs:
     RUN mkdir -p build-envs
     RUN basename `git rev-parse --show-toplevel` | tr '[:upper:]' '[:lower:]' >> build-envs/CURRENT_REPO
     RUN git rev-parse --abbrev-ref HEAD | sed 's/\//_/g' >> build-envs/CURRENT_BRANCH
-    RUN git log --pretty=format:"%h" -1 >> build-envs/CURRENT_COMMIT_HASH 
+    RUN git log --pretty=format:"%h" -1 >> build-envs/CURRENT_COMMIT_HASH
 
     SAVE ARTIFACT ./build-envs/
 
@@ -158,21 +158,27 @@ ADD_AWS_CPP_SDK:
     COMMAND
     WORKDIR /opt/rios
 
-    RUN /bin/bash -c "git clone --depth 1 --branch 1.11.260 --recurse-submodules https://github.com/aws/aws-sdk-cpp \
-                      && mkdir sdk_build \
-                      && cd sdk_build \
-                      && cmake ../aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/usr/local/ -DCMAKE_INSTALL_PREFIX=/usr/local/ -DBUILD_ONLY=\"s3\" -DENABLE_TESTING=OFF \
-                      && make \
-                      && make install \
-                      && cmake ../aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/usr/local/ -DCMAKE_INSTALL_PREFIX=/usr/local/ -DBUILD_ONLY=\"transfer\" -DENABLE_TESTING=OFF \
-                      && make \
-                      && make install"
+    IF ldconfig -p | grep -q libaws-cpp-sdk
+        RUN echo "=== libaws-cpp-sdk is already installed. ===";
+    ELSE
+        RUN echo "=== libaws-cpp-sdk not found, installing ===";
+        RUN /bin/bash -c "git clone --depth 1 --branch 1.11.260 --recurse-submodules https://github.com/aws/aws-sdk-cpp \
+                        && mkdir sdk_build \
+                        && cd sdk_build \
+                        && cmake ../aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/usr/local/ -DCMAKE_INSTALL_PREFIX=/usr/local/ -DBUILD_ONLY=\"s3\" -DENABLE_TESTING=OFF \
+                        && make \
+                        && make install \
+                        && cmake ../aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/usr/local/ -DCMAKE_INSTALL_PREFIX=/usr/local/ -DBUILD_ONLY=\"transfer\" -DENABLE_TESTING=OFF \
+                        && make \
+                        && make install \
+                        && ldconfig"
+    END
 
 ADD_INTEL_HARDWARE_ENCODING:
     COMMAND
     RUN /bin/bash -c "sudo apt-get -qq install -y gpg-agent wget && \
                       wget -qO - https://repositories.intel.com/graphics/intel-graphics.key | \
-                      sudo gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
+                      sudo gpg --yes --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
                       echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/graphics/ubuntu focal-legacy main' | \
                       sudo tee  /etc/apt/sources.list.d/intel.gpu.focal.list && \
                       sudo apt-get -qq update && \
