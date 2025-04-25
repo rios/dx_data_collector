@@ -1,0 +1,32 @@
+# Descriptive name for data
+episode_name: test_output
+ingestion:
+  # The output mode for the data
+  # triggered - data is stored in memory in a circular buffer and only outputted when a trigger is received
+  # continuous - data is stored in memory in a circular buffer and outputted continuously ever buffer_length_s
+  output_mode: triggered
+  # Max time data is stored in memory - this is an upper bound on triggering as well
+  buffer_length_s: 10
+  # List of topics to subscribe to
+  topics:
+    - /point_cloud_no_filter
+    # When logging_stamp_topic is set, dx_data_collector subscribes to std_msgs/Time on this
+    # topic. It collects all the timestamps and when outputting the data for this topic it discards
+    # all messages whose timestamps are have not been received on this topic.
+    - topic: /point_cloud_filter
+      logging_stamp_topic: /point_cloud_filter_relevant
+    - topic: /image_filter
+      logging_stamp_topic: /image_filter_relevant
+
+formatters:
+  - name: rosbag # used for pipelines
+    type: rosbag
+
+output:
+  - name: filesystem # used for pipelines
+    type: filesystem
+    path: /tmp/dx_data_collector_test_tmp_bags
+
+pipelines:
+  - formatter: rosbag
+    outputter: filesystem

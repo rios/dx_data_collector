@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<!--   dx_data_collector:dx_data_collector_node_test integration rostest launch. -->
+<launch>
+    <include file="$(find dx_data_collector)/launch/dx_data_collector.launch">
+        <arg name="data_collection_config"
+            value="$(find dx_data_collector)/config/dx_data_collector_node_test.yaml" />
+    </include>
+
+    <test test-name="dx_data_collector_node_ros_test" pkg="dx_data_collector"
+        type="dx_data_collector_node_ros_test">
+    </test>
+</launch>

@@ -11,22 +11,22 @@
 #ifndef __ROS_DATA_INGESTION_H__
 #define __ROS_DATA_INGESTION_H__
 
-#include <chrono>
-#include <unordered_map>
-
-#include <ros/ros.h>
-#include <tf2/buffer_core.h>
-#include <tf2_ros/transform_listener.h>
-
+#include <dx_data_collector_msgs/GetTime.h>
+#include <dx_data_collector_msgs/Snapshot.h>
 #include <dx_rios_utils/base.h>
 #include <dx_rios_utils/json/rapidjson/prettywriter.h>
 #include <dx_rios_yaml/yaml.h>
-#include <dx_data_collector_msgs/Snapshot.h>
-#include <dx_data_collector_msgs/GetTime.h>
+#include <ros/ros.h>
+#include <std_msgs/Time.h>
+#include <tf2/buffer_core.h>
+#include <tf2_ros/transform_listener.h>
+
+#include <chrono>
+#include <string>
+#include <unordered_map>
 
 #include "data_types/dx_ros_msg.h"
 #include "ros_msg_parser/ros_parser.hpp"
-
 
 namespace rios { namespace data_collector {
 
@@ -176,6 +176,36 @@ public:
   TopicIngestor(const rios::cfg& topic_config, RosDataBuffer& ros_data_buffer);
 
   /**
+   * @brief Get the topic name
+   *
+   * @return const std::string& The topic name
+   */
+  const std::string & getTopicName() const { return topic_name_; }
+
+  /**
+   * @brief Returns true if timestamp filtering is enabled
+   *
+   * @return bool
+   */
+  bool timestampFilterEnabled() const { return logging_stamp_topic_.has_value(); }
+
+  /**
+   * @brief Returns true if this timestamp is in the set of relevant timestamps.
+   *
+   * @return bool
+   */
+  bool isTimeStampRelevant(const ros::Time & time) const
+  {
+    return relevant_timestamps_.find(time) != relevant_timestamps_.end();
+  }
+
+  /**
+   * @brief Clear the relevant timestamps
+   *
+   */
+  void clearRelevantTimestamps() { relevant_timestamps_.clear(); }
+
+  /**
    * @brief Pause all ingestion
    * 
    */
@@ -212,10 +242,28 @@ private:
   std::string topic_name_;
 
   /**
+   * @brief The logging_stamp_topic subscriber
+   *
+   */
+  std::optional<ros::Subscriber> logging_stamp_topic_sub_ = std::nullopt;
+
+  /**
+   * @brief Topic name to use for timestamp filtering
+   *
+   */
+  std::optional<std::string> logging_stamp_topic_ = std::nullopt;
+
+  /**
+   * @brief Set of timestamps to use for filtering
+   *
+   */
+  std::set<ros::Time> relevant_timestamps_;
+
+  /**
    * @brief Throttle period for unchanging values
    * 
    */
-  float throttle_period_s_;
+  float throttle_period_s_ = NO_THROTTLE;
 
   /**
    * @brief Parsers collection
@@ -236,7 +284,16 @@ private:
    */
   void topicCallback(const ros::MessageEvent<RosMsgParser::ShapeShifter>& msg_event);
 
+  /**
+   * @brief Callback for the relevant timestamp topic
+   *
+   * @param msg
+   */
+
+  void relevantTimestampTopicCallback(const std_msgs::Time::ConstPtr & msg);
 };
+
+using IngestorMap = std::unordered_map<std::string, TopicIngestor::Ptr>;
 
 /**
  * @brief Class to encapsulate data ingestion coming from ROS
@@ -264,6 +321,15 @@ public:
   */
   void registerStoreCallback(std::function<void (std::deque<DxRosMsg::Ptr>, std::unordered_map<std::string, std::shared_ptr<std::string>>, const std::string&)> callback);
 
+  /**
+   * @brief Get the topic ingestors map
+   *
+   * @return const std::unordered_map<std::string, TopicIngestor::Ptr>& The topic ingestors map
+   */
+  const std::unordered_map<std::string, TopicIngestor::Ptr> & getTopicIngestors() const
+  {
+    return topic_ingestors_;
+  }
 
 private:
 
@@ -316,7 +382,7 @@ private:
    * @brief Map of topic ingestors by topic
    * 
    */
-  std::vector<TopicIngestor::Ptr> topic_ingestors_;
+  std::unordered_map<std::string, TopicIngestor::Ptr> topic_ingestors_;
 
   /**
    * @brief The ROS data buffer
@@ -385,18 +451,20 @@ private:
    * @return true Successfully output data
    * @return false Could not output data
    */
-  bool outputData(std::optional<ros::Time> start_time = std::nullopt, std::optional<ros::Time> end_time = std::nullopt, const std::string& snapshot_name = "");
+  bool outputData(
+    std::optional<ros::Time> start_time = std::nullopt,
+    std::optional<ros::Time> end_time = std::nullopt, const std::string & snapshot_name = "");
 
     /**
    * @brief Callback for the get_time service
-   * 
+   *
    * @param req The request
    * @param res The response
    * @return true Success
    * @return false Failure
    */
   bool getTime(dx_data_collector_msgs::GetTime::Request& req, dx_data_collector_msgs::GetTime::Response& res);
-    
+
 };
 
 

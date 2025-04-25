@@ -78,7 +78,10 @@ unit-test:
 
 integration-test:
     FROM +dep-setup
-    DO ROS1+CATKIN_TEST --TEST_TYPE=integration
+
+    ARG DISABLE_SYSMON="OFF"
+
+    DO ROS1+CATKIN_TEST --TEST_TYPE=integration --CATKIN_BUILD_ARGS="-DDUMMY=${DISABLE_SYSMON}"
 
 dev-environment:
     FROM +copy-build
@@ -176,22 +179,27 @@ ADD_AWS_CPP_SDK:
 
 ADD_INTEL_HARDWARE_ENCODING:
     COMMAND
-    RUN /bin/bash -c "sudo apt-get -qq install -y gpg-agent wget && \
+    RUN /bin/bash -c "sudo apt-get -q install -y gpg-agent wget && \
                       wget -qO - https://repositories.intel.com/graphics/intel-graphics.key | \
                       sudo gpg --yes --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
                       echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/graphics/ubuntu focal-legacy main' | \
                       sudo tee  /etc/apt/sources.list.d/intel.gpu.focal.list && \
-                      sudo apt-get -qq update && \
-                      sudo apt-get -qq install -y \
+                      sudo apt-get -q update && \
+                      sudo apt-get -q install -y \
                       intel-opencl-icd \
                       intel-level-zero-gpu level-zero \
                       intel-media-va-driver-non-free libmfx1 libmfxgen1 libvpl2 libvpl-dev"
 
     WORKDIR /opt/rios
 
-    RUN /bin/bash -c "wget https://ffmpeg.org/releases/ffmpeg-7.0.1.tar.xz && \
-                      tar -xf ffmpeg-7.0.1.tar.xz && \
-                      cd ffmpeg-7.0.1 && \
-                      ./configure --enable-libvpl --enable-nonfree --enable-static --disable-shared --enable-libx264 --enable-gpl &&\
-                      make && \
-                      sudo make install"
+    IF command -v ffmpeg >/dev/null 2>&1
+        RUN echo -e "=== ffmpeg is already installed, version $(ffmpeg -version | head -n 3) \n    ===";
+    ELSE
+        RUN echo "=== ffmpeg not found, installing ===";
+        RUN /bin/bash -c "wget https://ffmpeg.org/releases/ffmpeg-7.0.1.tar.xz && \
+                        tar -xf ffmpeg-7.0.1.tar.xz && \
+                        cd ffmpeg-7.0.1 && \
+                        ./configure --enable-libvpl --enable-nonfree --enable-static --disable-shared --enable-libx264 --enable-gpl &&\
+                        make && \
+                        sudo make install"
+    END

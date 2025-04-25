@@ -26,4 +26,7 @@
   <depend>rosbag</depend>
   <depend>tf2_ros</depend>
 
+  <test_depend>rosunit</test_depend>
+  <test_depend>gtest</test_depend>
+  <test_depend>sensor_msgs</test_depend>
 </package>

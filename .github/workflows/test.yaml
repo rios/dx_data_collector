@@ -1,0 +1,19 @@
+name: dx_data_collector - Test
+
+on:
+  push:
+    branches:
+      - 'feature/*'
+      - 'hotfix/*'
+      - 'main'
+      - 'develop'
+jobs:
+  test:
+    uses: rios-ai/<internal_workflow_templates>/.github/workflows/rios_test.yaml@develop
+    with:
+      working-directory: .
+      earthly-args: '--BASE_IMAGE=<internal_registry>/dx_data_collector-base:develop'
+      integration-test-build-args: '{"DISABLE_SYSMON":"ON"}'
+    secrets:
+      ssh-key: ${{ secrets.CI_SSH_KEY }}
+      bot-token: ${{ secrets.RIOS_BOT_TOKEN }}

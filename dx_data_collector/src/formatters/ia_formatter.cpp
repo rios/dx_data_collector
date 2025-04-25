@@ -6,7 +6,10 @@ rios::data_collector::IAFormatter::IAFormatter(const rios::cfg& ia_formatter_con
 
 }
 
-rios::data_collector::FormattedData::Ptr rios::data_collector::IAFormatter::formatData(std::deque<DxRosMsg::Ptr>& data_queue, std::unordered_map<std::string, std::shared_ptr<std::string>> params, std::string snapshot_name)
+rios::data_collector::FormattedData::Ptr rios::data_collector::IAFormatter::formatData(
+  std::deque<DxRosMsg::Ptr> & data_queue,
+  std::unordered_map<std::string, std::shared_ptr<std::string>> params, std::string snapshot_name,
+  const std::shared_ptr<const rios::data_collector::IngestorMap> topic_ingestors)
 {
   if (data_queue.empty())
   {

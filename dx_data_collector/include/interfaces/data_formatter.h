@@ -13,10 +13,8 @@
 
 #include <filesystem>
 
-#include <ros/ros.h>
-
 #include "data_types/dx_ros_msg.h"
-
+#include "ros_ingestion.h"
 
 namespace rios { namespace data_collector {
 
@@ -54,17 +52,19 @@ public:
   DECLARE_SMART_PTR(DataFormatter)
 
 public:
-
   /**
    * @brief Format the data as desired
-   * 
-   * @param data_queue The queue of messages
+   *
+   * @param data_queue The queue of buffered messages to format for output.
    * @param params The parameters coming from ROS
    * @param snapshot_name The name of the snapshot to format
-   * @return the formatted data 
+   * @param topic_ingestors Map of topic ingestors used for timestamp filtering.
+   * @return the formatted data
    */
-  virtual FormattedData::Ptr formatData(std::deque<DxRosMsg::Ptr>& data_queue, std::unordered_map<std::string, std::shared_ptr<std::string>> params, std::string snapshot_name) = 0;
-
+  virtual FormattedData::Ptr formatData(
+    std::deque<DxRosMsg::Ptr> & data_queue,
+    std::unordered_map<std::string, std::shared_ptr<std::string>> params, std::string snapshot_name,
+    const std::shared_ptr<const rios::data_collector::IngestorMap> topic_ingestors) = 0;
 };
 
 

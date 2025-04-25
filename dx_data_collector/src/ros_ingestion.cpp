@@ -23,41 +23,58 @@ void rios::data_collector::TopicIngestor::resume()
   paused_ = false;
 }
 
-rios::data_collector::TopicIngestor::TopicIngestor(const rios::cfg& topic_config, RosDataBuffer& ros_data_buffer)
-: nh_("~")
-, ros_data_buffer_(ros_data_buffer)
+rios::data_collector::TopicIngestor::TopicIngestor(
+  const rios::cfg & topic_config, RosDataBuffer & ros_data_buffer)
+: nh_("~"), ros_data_buffer_(ros_data_buffer)
 {
   // Attempt to determine the config as just a string (indicating default settings for the topic)
-  try
-  {
+  try {
     topic_name_ = topic_config.as<std::string>();
     throttle_period_s_ = NO_THROTTLE;
-  }
-  catch(const std::exception& e)
-  {
+  } catch (const std::exception & e) {
     // the config is a map defining non-default settings
-    if (!topic_config["topic"]) 
-    {
-      ROS_ERROR_STREAM("No 'topic' field defined in topics map. This is required. Topic will not be registered.");
+    if (!topic_config["topic"]) {
+      ROS_ERROR_STREAM(
+        "No 'topic' field defined in topics map. This is required. Topic will not be registered.");
       return;
     }
-    
+
     topic_name_ = topic_config["topic"].as<std::string>();
-    
-    if (topic_config["throttle_period_s"])
-    {
+
+    if (topic_config["logging_stamp_topic"]) {
+      const std::string ts_topic_str = topic_config["logging_stamp_topic"].as<std::string>();
+      if (ts_topic_str != "") {
+        logging_stamp_topic_ = ts_topic_str;
+      } else {
+        ROS_ERROR_STREAM(
+          "Empty logging_stamp_topic string. Timestamp filtering will not be enabled.");
+      }
+    } else if (topic_config["throttle_period_s"]) {
       throttle_period_s_ = topic_config["throttle_period_s"].as<float>();
-    }
-    else
-    {
+    } else {
       throttle_period_s_ = NO_THROTTLE;
     }
   }
 
   // Subscribe to the topic
-  topic_sub_ = nh_.subscribe(topic_name_, MSG_QUEUE_LENGTH, &rios::data_collector::TopicIngestor::topicCallback, this);
-  
-  ROS_INFO_STREAM("Successfully subscribed to " << topic_name_ << (throttle_period_s_ == NO_THROTTLE ? " without a throttle." : " with a throttle period of " + std::to_string(throttle_period_s_) + "s."));
+  topic_sub_ = nh_.subscribe(
+    topic_name_, MSG_QUEUE_LENGTH, &rios::data_collector::TopicIngestor::topicCallback, this);
+
+  ROS_INFO_STREAM(
+    "Successfully subscribed to " << topic_name_
+                                  << (throttle_period_s_ == NO_THROTTLE
+                                        ? " without a throttle."
+                                        : " with a throttle period of " +
+                                            std::to_string(throttle_period_s_) + "s."));
+
+  if (logging_stamp_topic_) {
+    logging_stamp_topic_sub_ = nh_.subscribe(
+      *logging_stamp_topic_, MSG_QUEUE_LENGTH,
+      &rios::data_collector::TopicIngestor::relevantTimestampTopicCallback, this);
+
+    ROS_INFO_STREAM(
+      "..also successfully subscribed to associated logging_stamp_topic " << *logging_stamp_topic_);
+  }
 }
 
 void rios::data_collector::TopicIngestor::topicCallback(const ros::MessageEvent<RosMsgParser::ShapeShifter>& msg_event)
@@ -102,6 +119,15 @@ void rios::data_collector::TopicIngestor::topicCallback(const ros::MessageEvent<
 
   // Regardless - add to buffer in case latched message is constantly published (this may cause some duplicates in the output but it's ok)
   ros_data_buffer_.addMsg(dx_msg);
+}
+
+void rios::data_collector::TopicIngestor::relevantTimestampTopicCallback(
+  const std_msgs::Time::ConstPtr & msg)
+{
+  // Don't record if we're paused
+  if (paused_) return;
+
+  relevant_timestamps_.insert(msg->data);
 }
 
 rios::data_collector::RosDataBuffer::RosDataBuffer(double max_buffer_time_s) 
@@ -231,37 +257,33 @@ bool rios::data_collector::RosDataBuffer::outputData(std::deque<DxRosMsg::Ptr>& 
   return true;
 }
 
-rios::data_collector::RosDataIngestor::RosDataIngestor(const rios::cfg& ingestion_config, const std::string& episode_name)
-: nh_("~")
-, ingestion_config_(ingestion_config)
-, ros_data_buffer_(ingestion_config["buffer_length_s"].as<double>())
-, episode_name_(episode_name)
+rios::data_collector::RosDataIngestor::RosDataIngestor(
+  const rios::cfg & ingestion_config, const std::string & episode_name)
+: nh_("~"),
+  ingestion_config_(ingestion_config),
+  ros_data_buffer_(ingestion_config["buffer_length_s"].as<double>()),
+  episode_name_(episode_name)
 {
   // If we're in continuous mode, register a callback everytime the buffer fills up
-  if (ingestion_config["continuous_mode"] && ingestion_config["continuous_mode"].as<bool>())
-  {
-    ros_data_buffer_.registerBufferFullCallback(
-    [this]()
-    {
-      outputData();
-    });
+  if (ingestion_config["continuous_mode"] && ingestion_config["continuous_mode"].as<bool>()) {
+    ros_data_buffer_.registerBufferFullCallback([this]() { outputData(); });
   }
 
   // Create tf buffer
-  tf_buffer_ = std::make_shared<tf2_ros::Buffer>((ros::Duration)tf2::BufferCore::DEFAULT_CACHE_TIME, true);
+  tf_buffer_ =
+    std::make_shared<tf2_ros::Buffer>((ros::Duration)tf2::BufferCore::DEFAULT_CACHE_TIME, true);
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
   // Create topic ingestors
-  for (auto & topic : ingestion_config["topics"])
-  {
-    topic_ingestors_.push_back(std::make_shared<TopicIngestor>(topic, ros_data_buffer_));
+  for (auto & topic : ingestion_config["topics"]) {
+    std::shared_ptr<TopicIngestor> ingestor =
+      std::make_shared<TopicIngestor>(topic, ros_data_buffer_);
+    topic_ingestors_[ingestor->getTopicName()] = ingestor;
   }
 
   // Register parameters to collect
-  if (ingestion_config["params"])
-  {
-    for (auto & param : ingestion_config["params"])
-    {
+  if (ingestion_config["params"]) {
+    for (auto & param : ingestion_config["params"]) {
       ros_data_buffer_.registerParam(param.as<std::string>());
     }
   }
@@ -273,48 +295,36 @@ rios::data_collector::RosDataIngestor::RosDataIngestor(const rios::cfg& ingestio
   get_time_service_ = nh_.advertiseService("get_time", &RosDataIngestor::getTime, this);
 
   // Check if working hours are defined and if so, create schedule events to pause/resume data collection at the appropriate times
-  if (ingestion_config["schedule"])
-  {
-    for (auto & schedule_config : ingestion_config["schedule"])
-    {
-      schedule_events_.push_back(std::make_shared<ScheduleEvent>(schedule_config.as<rios::cfg>(), 
-        [this](const std::string& action)
-        {
-          if (action == "pause")
-          {
-            ROS_INFO_STREAM("Pausing data collection according to schedule.");
-            TopicIngestor::pause();
-          }
-          else if (action == "resume")
-          {
-            ROS_INFO_STREAM("Resuming data collection according to schedule.");
-            TopicIngestor::resume();
-          }
-          else
-          {
-            ROS_ERROR_STREAM("Invalid action in schedule config: " << action);
-          }
-        }));
+  if (ingestion_config["schedule"]) {
+    for (auto & schedule_config : ingestion_config["schedule"]) {
+      schedule_events_.push_back(
+        std::make_shared<ScheduleEvent>(
+          schedule_config.as<rios::cfg>(), [this](const std::string & action) {
+            if (action == "pause") {
+              ROS_INFO_STREAM("Pausing data collection according to schedule.");
+              TopicIngestor::pause();
+            } else if (action == "resume") {
+              ROS_INFO_STREAM("Resuming data collection according to schedule.");
+              TopicIngestor::resume();
+            } else {
+              ROS_ERROR_STREAM("Invalid action in schedule config: " << action);
+            }
+          }));
     }
 
     std::chrono::system_clock::time_point last_time = (*schedule_events_.begin())->getLastTime();
     std::string last_action = (*schedule_events_.begin())->getAction();
-    for (auto & event : schedule_events_)
-    {
-      if (event->getLastTime() > last_time)
-      {
+    for (auto & event : schedule_events_) {
+      if (event->getLastTime() > last_time) {
         last_time = event->getLastTime();
         last_action = event->getAction();
       }
     }
 
-    if (last_action == "pause")
-    {
+    if (last_action == "pause") {
       ROS_INFO_STREAM("Pausing data collection as it was the last scheduled event.");
       TopicIngestor::pause();
-    }
-    else if (last_action == "resume")
-    {
+    } else if (last_action == "resume") {
       ROS_INFO_STREAM("Resuming data collection as it was the last scheduled event.");
       TopicIngestor::resume();
     }

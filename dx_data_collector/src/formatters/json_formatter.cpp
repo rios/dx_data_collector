@@ -6,7 +6,10 @@ rios::data_collector::JsonFormatter::JsonFormatter(const rios::cfg& json_formatt
 
 }
 
-rios::data_collector::FormattedData::Ptr rios::data_collector::JsonFormatter::formatData(std::deque<DxRosMsg::Ptr>& data_queue, std::unordered_map<std::string, std::shared_ptr<std::string>> params, std::string snapshot_name)
+rios::data_collector::FormattedData::Ptr rios::data_collector::JsonFormatter::formatData(
+  std::deque<DxRosMsg::Ptr> & data_queue,
+  std::unordered_map<std::string, std::shared_ptr<std::string>> params, std::string snapshot_name,
+  const std::shared_ptr<const rios::data_collector::IngestorMap> topic_ingestors)
 {
   std::string episode_uuid = boost::uuids::to_string(boost::uuids::random_generator()());
 
