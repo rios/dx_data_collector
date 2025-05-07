@@ -1,0 +1,10 @@
+name: Lint checks
+
+on:
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  lint_checks:
+    uses: rios-ai/<internal_workflow_templates>/.github/workflows/rios_lint.yaml@develop
