@@ -81,17 +81,25 @@ spec:
               - sh
               - -c
               - 'curl -f --header "subsystem-type: $RIOS_SUBSYSTEM_TYPE" --header "subsystem-instance: $RIOS_SUBSYSTEM_INSTANCE" {{ .Values.sysmon_probes.host }}:{{ .Values.sysmon_probes.port }}{{ .Values.sysmon_probes.paths.startup }}'
-            initialDelaySeconds: 5
-            periodSeconds: 3
-            failureThreshold: 100
+            initialDelaySeconds: {{.Values.StartupInitialDelay}}
+            periodSeconds: {{.Values.StartupInitialPeriod}}
+            failureThreshold: {{.Values.StartupFailureThreshold}}
+            successThreshold: {{.Values.StartupSuccessThreshold}}
+            timeoutSeconds: {{.Values.StartupTimeoutSeconds}}
+          {{ if .Values.LivenessProbeEnable }}  
           livenessProbe:
             exec:
               command:
               - sh
               - -c
               - 'curl -f --header "subsystem-type: $RIOS_SUBSYSTEM_TYPE" --header "subsystem-instance: $RIOS_SUBSYSTEM_INSTANCE" {{ .Values.sysmon_probes.host }}:{{ .Values.sysmon_probes.port }}{{ .Values.sysmon_probes.paths.liveness }}'
-            initialDelaySeconds: 5
-            periodSeconds: 5
+            initialDelaySeconds: {{.Values.LivenessInitialDelay}}
+            periodSeconds: {{.Values.LivenessInitialPeriod}}
+            failureThreshold: {{.Values.LivenessFailureThreshold}}
+            successThreshold: {{.Values.LivenessSuccessThreshold}}
+            timeoutSeconds: {{.Values.LivenessTimeoutSeconds}}
+          {{- end }}
+
       volumes:
         - name: log-storage
           hostPath:

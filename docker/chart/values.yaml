@@ -11,6 +11,20 @@ logPath: "/data-pool/logs"
 coreDumpPath: "/data-pool/core-dump"
 logSize: 50M # Apache rotatelogs maximum filesize, followed by exactly one of the letters B (Bytes), K (KBytes), M (MBytes) or G (GBytes).
 
+#startup probe parameters
+StartupInitialDelay: 5
+StartupInitialPeriod: 3
+StartupFailureThreshold: 100
+StartupSuccessThreshold: 1
+StartupTimeoutSeconds: 2
+
+#liveness probe parameters
+LivenessInitialDelay: 5
+LivenessInitialPeriod: 3
+LivenessFailureThreshold: 100
+LivenessSuccessThreshold: 1
+LivenessTimeoutSeconds: 2
+
 env:
   PYTHONUNBUFFERED: 1
   ROSCONSOLE_STDOUT_LINE_BUFFERED: 1
