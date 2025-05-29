@@ -38,10 +38,10 @@ spec:
                                        node_name:={{ .Values.collectorName }} --wait  2>&1 | \
                                        rotatelogs -e -l '/logs/data_collector_%Y-%m-%d_%H-%M-%S.log' {{ .Values.logSize }}"]
           env:
-            - name: AWS_SHARED_CREDENTIALS_FILE 
-              value: "/vault/secrets/wasabi-access.yaml" 
+            - name: AWS_SHARED_CREDENTIALS_FILE
+              value: "/vault/secrets/wasabi-access.yaml"
             - name: ROS_MASTER_URI
-              value: http://{{ .Release.Name}}-rios-roscore-service:80/
+              value: {{ printf "http://%s:%v/" (coalesce .Values.hostname (printf "%s-rios-roscore-service" .Release.Name)) (.Values.port | default 80) }}
             - name: ROS_IP
               valueFrom:
                 fieldRef:
@@ -74,7 +74,7 @@ spec:
             readOnly: false
           - name: fs-output-dir
             mountPath: /data-collector-fs-data/
-            readOnly: false 
+            readOnly: false
           startupProbe:
             exec:
               command:
@@ -86,7 +86,7 @@ spec:
             failureThreshold: {{.Values.StartupFailureThreshold}}
             successThreshold: {{.Values.StartupSuccessThreshold}}
             timeoutSeconds: {{.Values.StartupTimeoutSeconds}}
-          {{ if .Values.LivenessProbeEnable }}  
+          {{ if .Values.LivenessProbeEnable }}
           livenessProbe:
             exec:
               command:
