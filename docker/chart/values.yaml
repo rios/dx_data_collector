@@ -2,10 +2,16 @@
 # Declare variables to be passed into your templates.
 replicaCount: 1
 
-
 # Set to override CNI ROS master interface
 hostname:
 port:
+
+# Use default dns policy with host networking
+dnsPolicy: ClusterFirstWithHostNet
+
+# The time that Kubernetes waits after sending a SIGTERM signal to a Pod before forcefully
+# terminating it with a SIGKILL signal.
+terminationGracePeriodSeconds: 30
 
 dockerRegistry: "<internal_registry>"
 containerTag: develop

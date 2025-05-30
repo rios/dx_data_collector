@@ -27,8 +27,9 @@ spec:
         runAsUser: 0
         runAsGroup: 0
         fsGroup: 0
-      dnsPolicy: ClusterFirstWithHostNet
+      dnsPolicy: {{ .Values.dnsPolicy }}
       hostNetwork: true
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       containers:
         - name: dx-data-collector
           image: {{ .Values.dockerRegistry }}/dx_data_collector:{{ .Values.containerTag }}
