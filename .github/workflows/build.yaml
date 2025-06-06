@@ -16,7 +16,6 @@ jobs:
     with:
       working-directory: .
       earthly-args: '--BASE_IMAGE=<internal_registry>/dx_data_collector-base:develop'
-      runs_on: "['AWS', 'ci2']"
     secrets:
       ssh-key: ${{ secrets.CI_SSH_KEY }}
       bot-token: ${{ secrets.RIOS_BOT_TOKEN }}

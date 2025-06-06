@@ -11,7 +11,6 @@ jobs:
     with:
       # platform: linux/arm/v7 # Uncomment if you wish to build on ARM
       working-directory: .
-      runs_on: "['AWS', 'ci2']"
     secrets:
       ssh-key: ${{ secrets.CI_SSH_KEY }}
       bot-token: ${{ secrets.RIOS_BOT_TOKEN }}
