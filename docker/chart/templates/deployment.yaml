@@ -37,7 +37,7 @@ spec:
           args: ["/bin/bash", "-c", "roslaunch dx_data_collector dx_data_collector.launch \
                                        data_collection_config:=/data-collector/data_collection_config.yaml
                                        node_name:={{ .Values.collectorName }} --wait  2>&1 | \
-                                       rotatelogs -e -l '/logs/data_collector_%Y-%m-%d_%H-%M-%S.log' {{ .Values.logSize }}"]
+                                       rotatelogs -e -l /logs/data_collector_%Y-%m-%d_%H-%M-%S_{{ .Values.containerTag }}.log {{ .Values.logSize }}"]
           env:
             - name: AWS_SHARED_CREDENTIALS_FILE
               value: "/vault/secrets/wasabi-access.yaml"
