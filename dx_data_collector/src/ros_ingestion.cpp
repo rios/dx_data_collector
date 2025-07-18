@@ -291,6 +291,10 @@ rios::data_collector::RosDataIngestor::RosDataIngestor(
   // Create the snapshot service server
   snapshot_service_ = nh_.advertiseService("snapshot", &RosDataIngestor::snapshotCallback, this);
 
+  // Create the snapshot topic interface subscriber
+  snapshot_trigger_sub_ =
+    nh_.subscribe("snapshot_trigger", 1, &RosDataIngestor::snapshotTriggerCallback, this);
+
   // Create the time service server
   get_time_service_ = nh_.advertiseService("get_time", &RosDataIngestor::getTime, this);
 
@@ -351,6 +355,25 @@ bool rios::data_collector::RosDataIngestor::snapshotCallback(dx_data_collector_m
   res.message = "Data storage triggered.";
 
   return res.success;
+}
+
+void rios::data_collector::RosDataIngestor::snapshotTriggerCallback(
+  const dx_data_collector_msgs::SnapshotTrigger::ConstPtr & req)
+{
+  std::optional<ros::Time> start_time = std::nullopt;
+  std::optional<ros::Time> end_time = std::nullopt;
+  if (!req->start_time.isZero()) start_time.emplace(req->start_time);
+  if (!req->end_time.isZero()) end_time.emplace(req->end_time);
+
+  std::string snapshot_name = episode_name_;
+  if (!req->snapshot_name.empty()) snapshot_name = req->snapshot_name;
+
+  const bool success = outputData(start_time, end_time, snapshot_name);
+  if (!success) {
+    ROS_ERROR(
+      "Failed to output data for snapshot trigger request: %s, start_time: %.3f, end_time: %.3f",
+      req->snapshot_name.c_str(), req->start_time.toSec(), req->end_time.toSec());
+  }
 }
 
 bool rios::data_collector::RosDataIngestor::outputData(std::optional<ros::Time> start_time , std::optional<ros::Time> end_time, const std::string& snapshot_name)

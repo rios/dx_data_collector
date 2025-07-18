@@ -48,6 +48,11 @@ PYBIND11_MODULE(data_collector_commander, module) {
              &DataCollectorCommander::stopRecording, "Stop recording and take a snapshot of the data",
              py::arg("snapshot_name") = py::none())
 
+        .def(
+            "stop_recording_ff", &DataCollectorCommander::stopRecordingFF,
+            "Stop recording and take a snapshot of the data (fire and forget) using the topic interface",
+            py::arg("snapshot_name") = py::none())
+
     ;
 
 }

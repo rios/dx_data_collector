@@ -13,6 +13,7 @@
 
 #include <dx_data_collector_msgs/GetTime.h>
 #include <dx_data_collector_msgs/Snapshot.h>
+#include <dx_data_collector_msgs/SnapshotTrigger.h>
 #include <dx_rios_utils/base.h>
 #include <dx_rios_utils/json/rapidjson/prettywriter.h>
 #include <dx_rios_yaml/yaml.h>
@@ -397,6 +398,12 @@ private:
   std::vector<std::function<void (std::deque<DxRosMsg::Ptr>, std::unordered_map<std::string, std::shared_ptr<std::string>>, const std::string&)>> store_callbacks_;
 
   /**
+   * @brief Topic interface for requesting snapshot of the data
+   *
+   */
+  ros::Subscriber snapshot_trigger_sub_;
+
+  /**
    * @brief Service to take a snapshot of the data
    * 
    */ 
@@ -441,6 +448,13 @@ private:
    * @return false Failure
    */
   bool snapshotCallback(dx_data_collector_msgs::Snapshot::Request& req, dx_data_collector_msgs::Snapshot::Response& res);
+
+  /**
+   * @brief Callback for the snapshot trigger topic interface
+   *
+   * @param req The trigger request
+   */
+  void snapshotTriggerCallback(const dx_data_collector_msgs::SnapshotTrigger::ConstPtr & req);
 
   /**
    * @brief Output data from the buffer

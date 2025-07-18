@@ -7,6 +7,7 @@ find_package(catkin REQUIRED message_generation std_msgs)
 add_message_files(
   FILES
   SystemState.msg
+  SnapshotTrigger.msg
 )
 
 ## Generate services in the 'srv' folder
