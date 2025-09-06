@@ -7,8 +7,6 @@ on:
       - 'hotfix/*'
       - 'main'
       - 'develop'
-  schedule:
-    - cron: '0 16 * * 6' # Run every sat at 4pm UTC
 
 jobs:
   build:

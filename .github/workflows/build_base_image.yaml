@@ -11,9 +11,6 @@ on:
       - '.github/**'
       - 'docker/**'
 
-  schedule:
-    - cron: '0 13 * * 6' # Run every sat at 1pm UTC
-
 jobs:
   build:
     uses: rios-ai/<internal_workflow_templates>/.github/workflows/rios_build.yaml@develop
