@@ -5,12 +5,12 @@
   <description>Subsystem for collecting and exporting data from ROS</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
-  <maintainer email="leo.keselman@rios.ai">Leo Keselman</maintainer>
-  <maintainer email="shubham.kanitkar@rios.ai">Shubham Kanitkar</maintainer>
+  <maintainer email="maintainers@example.com">RIOS AI</maintainer>
 
-  <license>Proprietary</license>
+  <license>Apache-2.0</license>
 
-  <author email="leo.keselman@rios.ai">Leo Keselman</author>
+  <author>Leo Keselman</author>
+  <author>Shubham Kanitkar</author>
 
   <buildtool_depend>catkin</buildtool_depend>
 

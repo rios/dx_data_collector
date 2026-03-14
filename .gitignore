@@ -1,9 +1,23 @@
-
+# Editor / IDE
 .devcontainer/
 .vscode/
 
-.devcontainer/
-.vscode/
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa
+id_rsa.pub
+credentials.json
 
-.devcontainer/
-.vscode/
+# Build artifacts
+build/
+devel/
+install/
+*.pyc
+__pycache__/
+
+# Logs
+*.log

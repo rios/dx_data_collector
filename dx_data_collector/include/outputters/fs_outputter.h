@@ -1,6 +1,6 @@
 /**
  * @file fs_outputter.h
- * @author leo keselman (leo.keselman@rios.ai)
+ * @author Leo Keselman (github.com/rios-ai)
  * @brief filesystem outputter implementation
  * @version 0.1
  * @date 2023-10-20

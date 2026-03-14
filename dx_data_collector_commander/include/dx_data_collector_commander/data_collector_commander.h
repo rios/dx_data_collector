@@ -1,6 +1,6 @@
 /**
  * @file data_collector_commander.h
- * @author Leo Keselman (leo.keselman@rios.ai)
+ * @author Leo Keselman (github.com/rios-ai)
  * @brief Commander for triggering data collection
  * @version 0.1
  * @date 2023-10-25

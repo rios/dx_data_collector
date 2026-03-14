@@ -7,4 +7,10 @@ on:
 
 jobs:
   lint_checks:
-    uses: rios-ai/<internal_workflow_templates>/.github/workflows/rios_lint.yaml@develop
+    # NOTE: This workflow previously used RIOS-internal reusable workflows.
+    # Replace with your preferred linting setup.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint
+        run: echo "Configure lint step for your environment."

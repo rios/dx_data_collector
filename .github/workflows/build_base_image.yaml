@@ -13,11 +13,10 @@ on:
 
 jobs:
   build:
-    uses: rios-ai/<internal_workflow_templates>/.github/workflows/rios_build.yaml@develop
-    with:
-      working-directory: .
-      run_helm_build: false
-      earthly-build-action-target: 'tag-base-image'
-    secrets:
-      ssh-key: ${{ secrets.CI_SSH_KEY }}
-      bot-token: ${{ secrets.RIOS_BOT_TOKEN }}
+    # NOTE: This workflow previously used RIOS-internal reusable workflows.
+    # Replace with your preferred container build workflow.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build base image
+        run: echo "Configure base image build step for your environment. See docker/Earthfile."

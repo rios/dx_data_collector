@@ -1,6 +1,6 @@
 /**
  * @file ia_formatter.h
- * @author leo keselman (leo.keselman@rios.ai)
+ * @author Leo Keselman (github.com/rios-ai)
  * @brief Intelligent Agent formatter implementation
  * @version 0.1
  * @date 2024-07-26

@@ -13,7 +13,8 @@ dnsPolicy: ClusterFirstWithHostNet
 # terminating it with a SIGKILL signal.
 terminationGracePeriodSeconds: 30
 
-dockerRegistry: "<internal_registry>"
+# Set dockerRegistry to your container registry (e.g. ghcr.io/your-org)
+dockerRegistry: ""
 containerTag: develop
 collectorName: dx_data_collector
 imagePullPolicy: IfNotPresent

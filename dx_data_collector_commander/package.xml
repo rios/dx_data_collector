@@ -5,12 +5,12 @@
   <version>0.0.1</version>
   <description>RIOS interface for data collection</description>
 
-  <maintainer email="leo.keselman@rios.ai">Leo Keselman</maintainer>
-  <maintainer email="carlos.fernandez@rios.ai">Carlos Fernandez-Martinez</maintainer>
+  <maintainer email="maintainers@example.com">RIOS AI</maintainer>
 
-  <license>Proprietary</license>
+  <license>Apache-2.0</license>
 
-  <author email="leo.keselman@rios.ai">Leo Keselman</author>
+  <author>Leo Keselman</author>
+  <author>Carlos Fernandez-Martinez</author>
 
   <buildtool_depend>catkin</buildtool_depend>
   

@@ -1,6 +1,6 @@
 /**
  * @file ros_ingestion.cpp
- * @author Leo Keselman (leo.keselman@rios.ai)
+ * @author Leo Keselman (github.com/rios-ai)
  * @brief ROS ingestor implementation
  * @version 0.1
  * @date 2023-09-22

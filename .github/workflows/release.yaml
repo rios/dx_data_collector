@@ -7,10 +7,10 @@ on:
 
 jobs:
   release:
-    uses: rios-ai/<internal_workflow_templates>/.github/workflows/rios_release.yaml@develop
-    with:
-      # platform: linux/arm/v7 # Uncomment if you wish to build on ARM
-      working-directory: .
-    secrets:
-      ssh-key: ${{ secrets.CI_SSH_KEY }}
-      bot-token: ${{ secrets.RIOS_BOT_TOKEN }}
+    # NOTE: This workflow previously used RIOS-internal reusable workflows.
+    # Replace with your preferred release workflow.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Release
+        run: echo "Configure release step for your environment."

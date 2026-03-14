@@ -1,9 +1,6 @@
 # dx_data_collector
-http://github.com/rios-ai/dx_data_collector.git
 
-## Maintainers:
-- ...
-- ...
+See the [top-level README](../README.md) for full documentation.
 
 ## Usage:
 

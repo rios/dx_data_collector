@@ -1,6 +1,6 @@
 /**
  * @file dx_ros_msg.cpp
- * @author Leo Keselman (leo.keselman@rios.ai)
+ * @author Leo Keselman (github.com/rios-ai)
  * @brief Implementation of DxRosMsg
  * @version 0.1
  * @date 2023-09-26

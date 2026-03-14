@@ -50,13 +50,15 @@ formatters:
     type: rosbag
   
 output:
-  - name: wasabi # used for pipelines
+  - name: s3_output # used for pipelines
     type: s3
-    aws_profile: wasabi
-    endpoint_url: https://s3.us-west-1.wasabisys.com
-    bucket: rios-data-collector-testing
-    env: dev
-    area: test-collection
+    # aws_profile: set via AWS_PROFILE env var or ~/.aws/credentials
+    # endpoint_url: set to your S3-compatible endpoint (e.g. https://s3.amazonaws.com)
+    # See .env.example for required environment variables
+    endpoint_url: ${S3_ENDPOINT_URL}
+    bucket: ${S3_BUCKET}
+    env: ${S3_ENV:-dev}
+    area: ${S3_AREA:-data-collection}
 
   - name: filesystem # used for pipelines
     type: filesystem
@@ -64,6 +66,6 @@ output:
 
 pipelines:
   - formatter: json
-    outputter: wasabi
+    outputter: s3_output
   - formatter: rosbag
     outputter: filesystem

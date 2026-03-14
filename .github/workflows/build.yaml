@@ -10,10 +10,11 @@ on:
 
 jobs:
   build:
-    uses: rios-ai/<internal_workflow_templates>/.github/workflows/rios_build.yaml@develop
-    with:
-      working-directory: .
-      earthly-args: '--BASE_IMAGE=<internal_registry>/dx_data_collector-base:develop'
-    secrets:
-      ssh-key: ${{ secrets.CI_SSH_KEY }}
-      bot-token: ${{ secrets.RIOS_BOT_TOKEN }}
+    # NOTE: This workflow previously used RIOS-internal reusable workflows.
+    # To use in your own environment, replace with a standard earthly build step.
+    # See https://earthly.dev for Earthfile-based build documentation.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: echo "Configure build step for your environment. See docker/Earthfile."

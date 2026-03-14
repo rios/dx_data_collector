@@ -1,48 +1,111 @@
 # dx_data_collector
 
-> **⚠️ ARCHIVED REPOSITORY**  
-> This repository has been archived and moved into the [citadel monorepo](https://github.com/rios-ai/citadel).  
-> Please refer to the citadel repository for the latest version and updates.
+> **ARCHIVED REPOSITORY**
+> This repository has been archived. It is published here for transparency and reference.
 
-RIOS data
+A generic, configurable data collection pipeline for [ROS (Robot Operating System)](https://www.ros.org/).
+`dx_data_collector` subscribes to ROS topics, buffers incoming messages in a rolling time window, and
+exports data on demand through a pipeline of pluggable formatters and outputters.
+
+## Packages
+
+| Package | Description |
+|---|---|
+| `dx_data_collector` | Core data collection node: ingestion, formatting, and output |
+| `dx_data_collector_commander` | Client interface for triggering data collection recordings |
+| `dx_data_collector_msgs` | ROS message and service definitions |
 
 ## Overview
 
-`dx_data_collector` is responsbile for collecting and exporting data from `ROS` topics.
+`dx_data_collector` maintains a rolling in-memory buffer of ROS topic data for a configurable
+time window (`buffer_length_s`). When triggered, it runs the buffered data through one or more
+**pipelines**, each consisting of a **formatter** and an **outputter**. This allows the same data
+to be simultaneously written as a rosbag to the filesystem and as JSON to S3-compatible storage,
+for example.
+
+## Architecture
+
+The three major components are:
+
+- **Ingestion** (`ros_ingestion.cpp`): Subscribes to any ROS topic without knowing its type in
+  advance, using the bundled `ros_msg_parser` library (originally from
+  [facontidavide/ros_msg_parser](https://github.com/facontidavide/ros_msg_parser)).
+  Raw binary messages are held in the `RosDataBuffer` circular buffer.
+
+- **Formatters**: Implementations of `DataFormatter` that consume the buffer and produce structured
+  output. Built-in formatters: `json`, `rosbag`, `ia` (video/frames), `dummy`.
+
+- **Outputters**: Implementations of `DataOutputter` that write formatted data to a destination.
+  Built-in outputters: `filesystem`, `s3` (S3-compatible object storage), `dummy`.
 
 ## Configuration
 
-See [here](dx_data_collector/config/data_collection_config.yaml) for an example configuration.
+See [`dx_data_collector/config/data_collection_config.yaml`](dx_data_collector/config/data_collection_config.yaml)
+for a full example. A minimal configuration looks like:
 
-Essentially you need to:
+```yaml
+episode_name: my_dataset
+ingestion:
+  buffer_length_s: 60
+  topics:
+    - /camera/image_raw
+    - /tf
 
-- Configure one or more topics to listen to
-- Configure one or more `formatter`s that will organize and format the data when outputting is triggered
-- Configure one or more `outputter`s that will output the formatted data somewhere
-- Set up one or more collection `pipeline`s consisting of a `formatter` and an `outputter` each.
+formatters:
+  - name: bag
+    type: rosbag
 
-The config file examples are the best place to see available formatters and outputters as well as their configurations.
+output:
+  - name: local
+    type: filesystem
+    path: /tmp/dx_data_collector
 
-## Runtime Use
+pipelines:
+  - formatter: bag
+    outputter: local
+```
 
-Under the hood, the data collector maintains a buffer of data (in a RIOS internal format defined in [dx_data_collector/include/data_types/dx_ros_msg.h](dx_data_collector/include/data_types/dx_ros_msg.h) for the last bit of time, defined by the `buffer_length_s` config variable. The only function possible at runtime is to output some subset of this data. The `dx_data_collector_commander` allows "recording" but in effect it's just recording the timestamps for later output. The `buffer_length_s` puts an upper bound on the amount of data that can be output at one time.
+For S3/object storage output, set the environment variables listed in [`.env.example`](.env.example)
+and configure the `s3` outputter type.
 
-The dev ui allows recording from a webpage and otherwise, it should be triggered by the `dx_data_collector`.
+## Requirements
 
-## Design
+- ROS Noetic (Ubuntu 20.04)
+- C++17
+- [AWS SDK for C++](https://github.com/aws/aws-sdk-cpp) (required only if using the S3 outputter)
+- Catkin build system
 
-### Overview
+Internal build dependencies (`dx_rios_yaml`, `dx_rios_utils`, `dx_sysmon_sdk`, `dx_rios_pybind`)
+were RIOS-internal packages. See [docker/submodules.repos](docker/submodules.repos) for the
+original repository locations — these are not publicly available.
 
-The major elements of the architecture are `Ingestion`, `Formatters`, and `Outputters`. Ingestion takes in data and stores it in a buffer. When requested, it starts the output pipeline. `Formatters` format the internal data coming from ingestion and `Outputters` output the formatted data. The pipelines can then be made by mixing and matching formatters and ingestors.
+## Building
 
-### Ingestion
+This project uses [Earthly](https://earthly.dev) for containerized builds. See `docker/Earthfile`.
+For a local catkin build:
 
-The ingestion implementation is in [dx_data_collector/src/ros_ingestion.cpp](dx_data_collector/src/ros_ingestion.cpp). There is a global data buffer `RosDataBuffer` that stores a moving window of data for a configurable period of time. The buffer is written to by individual `TopicIngestor` objects instantiated for each configured topic. The topic ingestors can make subscriptions to any topic without knowing its type. This uses the `ros_msg_parser` code initially taken from [here](https://github.com/facontidavide/ros_msg_parser). Each message's data is stored in the buffer as raw binary until it needs to be outputted. Outputting is triggered by a service that defines the start and end time for the data of interest. At this time, a queue of pointers to the messages representing this data is built up from the buffer and sent down the pipeline.
+```bash
+cd <catkin_ws>/src
+# Place packages here or add to workspace
+catkin build dx_data_collector
+```
 
-### Formatting
+## Running
 
-A `formatter` is an implementation of the interface defined in [dx_data_collector/include/interfaces/data_formatter.h](dx_data_collector/include/interfaces/data_formatter.h). It takes as input a queue of shared pointers to `DxRosMsg` objects (thereby keeping them alive even if they're not in the buffer) and it is able to call `DxRosMsg` functions to parse the binary data or do whatever else may need to be done to format the data. The output is a data object which implements the interface defined in the same file as the data formatter definition. The only requirement is that it be able to output its formatted data to a filesystem path. Formatters must be added to the `cpp_outputters` map in [dx_data_collector/src/dx_data_collector_node.cpp](dx_data_collector/src/dx_data_collector_node.cpp).
+```bash
+roslaunch dx_data_collector dx_data_collector.launch \
+  data_collection_config:=/path/to/your/config.yaml
+```
 
-### Outputting
+## Environment Variables
 
-An `outputter` is an implementation of the interface defined in [dx_data_collector/include/interfaces/data_outputter.h](dx_data_collector/include/interfaces/data_outputter.h). It takes as input a pointer to some formatted data and must implement a function to output the data however appropriate. Outputters must be added to the `cpp_outputters` map in [dx_data_collector/src/dx_data_collector_node.cpp](dx_data_collector/src/dx_data_collector_node.cpp).
+See [`.env.example`](.env.example) for all configurable environment variables, particularly
+those required for S3 output.
+
+## License
+
+Apache-2.0. See [LICENSE](LICENSE).
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).

@@ -4,10 +4,9 @@
   <version>0.0.0</version>
   <description>Messages for dx_data_collector</description>
 
-  <maintainer email="leo.keselman@rios.ai">Leo Keselman</maintainer>
-  <maintainer email="neal.kurande@rios.ai">Neal Kurande</maintainer>
+  <maintainer email="maintainers@example.com">RIOS AI</maintainer>
 
-  <license>Proprietary</license>
+  <license>Apache-2.0</license>
 
   <buildtool_depend>catkin</buildtool_depend>
   <depend>std_msgs</depend>

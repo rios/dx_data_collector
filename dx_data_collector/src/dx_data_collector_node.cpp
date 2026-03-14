@@ -1,6 +1,6 @@
 /**
  * @file dx_data_collector_node.cpp
- * @author Leo Keselman (leo.keselman@rios.ai)
+ * @author Leo Keselman (github.com/rios-ai)
  * @brief Main Node of the data collector
  * @version 0.1
  * @date 2023-09-22

@@ -9,11 +9,11 @@ on:
       - 'develop'
 jobs:
   test:
-    uses: rios-ai/<internal_workflow_templates>/.github/workflows/rios_test.yaml@develop
-    with:
-      working-directory: .
-      earthly-args: '--BASE_IMAGE=<internal_registry>/dx_data_collector-base:develop'
-      integration-test-build-args: '{"DISABLE_SYSMON":"ON"}'
-    secrets:
-      ssh-key: ${{ secrets.CI_SSH_KEY }}
-      bot-token: ${{ secrets.RIOS_BOT_TOKEN }}
+    # NOTE: This workflow previously used RIOS-internal reusable workflows.
+    # To use in your own environment, replace with a standard earthly test step.
+    # See https://earthly.dev for Earthfile-based build documentation.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test
+        run: echo "Configure test step for your environment. See docker/Earthfile."
