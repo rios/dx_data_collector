@@ -109,3 +109,39 @@ Apache-2.0. See [LICENSE](LICENSE).
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Prerequisites & Known Limitations
+
+This repository is **archived** and was extracted from RIOS AI's internal monorepo. It will not build out-of-the-box without substituting several internal dependencies. The notes below describe what is required and what needs replacement.
+
+### Platform / Hardware
+
+- **ROS 1 Noetic only.** The package uses Catkin, `roscpp`, and the rosbag1 format. There is no ROS 2 port.
+- **Ubuntu 20.04** is the only tested host OS (this is the Noetic-supported pair).
+- **C++17** toolchain required.
+- No GPU is required by the core node. The `ia` formatter handles video/frames but does not itself depend on CUDA.
+
+### Internal RIOS Dependencies (Not on Public PyPI / GitHub)
+
+The following packages were hosted on RIOS-internal infrastructure (`<internal_pypi>` and private GitHub orgs) and are **not publicly available**. Builds that pull them via `docker/submodules.repos` will fail:
+
+- `dx_rios_yaml` — internal YAML config loader used by the data collector node
+- `dx_rios_utils` — internal C++/Python utility library
+- `dx_sysmon_sdk` — internal system-monitoring SDK
+- `dx_rios_pybind` — internal pybind11 helpers (used by `dx_data_collector_commander/bindings`)
+
+To build this repo standalone, you will need to either stub out, vendor, or replace the call sites that use these libraries. They are referenced in `CMakeLists.txt`, `package.xml`, and `submodules.repos`.
+
+### Build System
+
+- The provided `docker/Earthfile` uses [Earthly](https://earthly.dev) and imports `github.com/rios-ai/<internal_build_framework>` and `github.com/rios-ai/<internal_build_framework>/ros1`. **These repositories are private** and the `RIOS+rios-ros` base image cannot be pulled externally. The Earthfile is included for reference only — external users should fall back to a plain `catkin build` against a stock `ros:noetic-ros-base` image.
+- `docker/submodules.repos` points to private RIOS git repositories; `vcs import` against it will fail without VPN/credential access that no longer exists.
+
+### Outputters / External Services
+
+- The `s3` outputter requires the [AWS SDK for C++](https://github.com/aws/aws-sdk-cpp) installed at build time. If you do not need S3 output, you can remove the `s3` source files and the dependency.
+- S3 endpoints, buckets, and credentials are configured via environment variables (see `.env.example`). The original deployments targeted RIOS-internal MinIO/S3-compatible endpoints; you will need to substitute your own.
+
+### Maintenance Status
+
+This repository is **archival and unmaintained**. No issues, PRs, or security updates will be accepted. It is published for reference and transparency only.
