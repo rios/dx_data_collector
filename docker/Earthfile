@@ -1,7 +1,7 @@
 VERSION 0.7
 
-IMPORT --allow-privileged github.com/rios-ai/<internal_build_framework> AS RIOS
-IMPORT --allow-privileged github.com/rios-ai/<internal_build_framework>/ros1 AS ROS1
+IMPORT --allow-privileged <internal_build_framework> AS RIOS
+IMPORT --allow-privileged <internal_build_framework>/ros1 AS ROS1
 
 ARG --global DEV_ENV=false
 ARG BASE_IMAGE=RIOS+rios-ros

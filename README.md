@@ -134,7 +134,7 @@ To build this repo standalone, you will need to either stub out, vendor, or repl
 
 ### Build System
 
-- The provided `docker/Earthfile` uses [Earthly](https://earthly.dev) and imports `github.com/rios-ai/<internal_build_framework>` and `github.com/rios-ai/<internal_build_framework>/ros1`. **These repositories are private** and the `RIOS+rios-ros` base image cannot be pulled externally. The Earthfile is included for reference only — external users should fall back to a plain `catkin build` against a stock `ros:noetic-ros-base` image.
+- The provided `docker/Earthfile` uses [Earthly](https://earthly.dev) and imports `<internal_build_framework>` and `<internal_build_framework>/ros1`. **These repositories are private** and the `RIOS+rios-ros` base image cannot be pulled externally. The Earthfile is included for reference only — external users should fall back to a plain `catkin build` against a stock `ros:noetic-ros-base` image.
 - `docker/submodules.repos` points to private RIOS git repositories; `vcs import` against it will fail without VPN/credential access that no longer exists.
 
 ### Outputters / External Services
