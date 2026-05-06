@@ -6,7 +6,7 @@ ingestion:
   # List of topics to subscribe to
   topics:
 
-    - /qc_pelice/image_raw
+    - /qc_<site>/image_raw
 
 formatters:
   - name: json # used for pipelines
